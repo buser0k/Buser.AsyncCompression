@@ -1,0 +1,160 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  CAKE_VERSION: '3.0.0'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Cache .NET packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Install Cake
+      run: |
+        dotnet tool install --global Cake.Tool --version ${{ env.CAKE_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet cake build.cake --target=Restore
+
+    - name: Build solution
+      run: dotnet cake build.cake --target=Build
+
+    - name: Run tests
+      run: dotnet cake build.cake --target=Test
+
+    - name: Generate test results
+      run: dotnet cake build.cake --target=TestResults
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: test-results/
+
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Cache .NET packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Install Cake
+      run: |
+        dotnet tool install --global Cake.Tool --version ${{ env.CAKE_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet cake build.cake --target=Restore
+
+    - name: Build solution
+      run: dotnet cake build.cake --target=Build
+
+    - name: Run tests
+      run: dotnet cake build.cake --target=Test
+
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Cache .NET packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Install Cake
+      run: |
+        dotnet tool install --global Cake.Tool --version ${{ env.CAKE_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet cake build.cake --target=Restore
+
+    - name: Build solution
+      run: dotnet cake build.cake --target=Build
+
+    - name: Run tests
+      run: dotnet cake build.cake --target=Test
+
+  publish:
+    needs: [build-and-test, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Install Cake
+      run: |
+        dotnet tool install --global Cake.Tool --version ${{ env.CAKE_VERSION }}
+
+    - name: Publish packages
+      run: dotnet cake build.cake --target=Publish
+      env:
+        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_number }}
+        release_name: Release v${{ github.run_number }}
+        draft: false
+        prerelease: false

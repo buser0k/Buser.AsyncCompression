@@ -429,3 +429,16 @@ Temporary Items
 test.txt
 test.txt.gz
 *.test
+
+# Cake build artifacts
+tools/
+artifacts/
+test-results/
+coverage/
+*.nupkg
+*.snupkg
+
+# Cake
+tools/
+!tools/packages.config
+!tools/packages.config.example
