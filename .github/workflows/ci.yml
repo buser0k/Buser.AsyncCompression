@@ -7,7 +7,7 @@ on:
     branches: [ main, develop ]
 
 env:
-  DOTNET_VERSION: '9.0.x'
+  DOTNET_VERSION: '8.0.x' # Using .NET 8 for compatibility
   CAKE_VERSION: '3.0.0'
 
 jobs:

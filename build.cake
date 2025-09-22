@@ -10,6 +10,9 @@ var outputDir = "./artifacts";
 var testResultsDir = "./test-results";
 var coverageDir = "./coverage";
 
+// Ensure we're using .NET 8
+var dotnetVersion = "8.0.414";
+
 // Cleanup
 Task("Clean")
     .Does(() =>
