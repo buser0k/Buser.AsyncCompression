@@ -87,7 +87,7 @@ namespace Booser.AsyncCompression.Application.Services
 
         public static CompressionResult Success(CompressionJob job)
         {
-            return new CompressionResult(true, job, null);
+            return new CompressionResult(true, job, string.Empty);
         }
 
         public static CompressionResult Failed(string errorMessage)

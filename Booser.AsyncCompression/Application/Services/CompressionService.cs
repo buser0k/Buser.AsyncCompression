@@ -72,19 +72,19 @@ namespace Booser.AsyncCompression.Application.Services
                 SingleProducerConstrained = true
             };
 
-            var writer = new ActionBlock<byte[]>(bytes =>
+            var writer = new ActionBlock<byte[]>(async bytes =>
             {
-                outputStream.Write(bytes, 0, bytes.Length);
+                await outputStream.WriteAsync(bytes, 0, bytes.Length);
                 job.UpdateProgress(job.ProcessedBytes + bytes.Length);
                 _progressReporter.Report(job.ProgressPercentage);
             }, writerOptions);
 
             // Link the pipeline
             buffer.LinkTo(compressor);
-            await buffer.Completion.ContinueWith(task => compressor.Complete());
+            _ = buffer.Completion.ContinueWith(task => compressor.Complete());
 
             compressor.LinkTo(writer);
-            await compressor.Completion.ContinueWith(task => writer.Complete());
+            _ = compressor.Completion.ContinueWith(task => writer.Complete());
 
             var readBuffer = new byte[settings.BufferSize];
 
@@ -108,11 +108,11 @@ namespace Booser.AsyncCompression.Application.Services
 
                     while (!buffer.Post(postData))
                     {
-                        // Wait until buffer can accept data
+                        await Task.Delay(1); // Wait until buffer can accept data
                     }
                 }
 
-                if (readCount != settings.BufferSize)
+                if (readCount == 0) // End of stream
                 {
                     buffer.Complete();
                     break;
