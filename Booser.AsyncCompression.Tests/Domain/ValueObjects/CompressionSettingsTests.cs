@@ -51,10 +51,13 @@ public class CompressionSettingsTests
     }
 
     [Fact]
-    public void Constructor_WithMaxBufferSizeLessThanBufferSize_ShouldThrowArgumentException()
+    public void Constructor_WithMaxBufferSizeLessThanBufferSize_ShouldAdjustBufferSize()
     {
-        // Act & Assert
-        var action = () => new CompressionSettings(4096, 1024);
-        action.Should().Throw<ArgumentException>();
+        // Act
+        var settings = new CompressionSettings(4096, 1024);
+
+        // Assert
+        settings.BufferSize.Should().Be(1024); // Should be adjusted to maxBufferSize
+        settings.MaxBufferSize.Should().Be(1024);
     }
 }
