@@ -28,7 +28,7 @@ namespace Booser.AsyncCompression
             }
         }
 
-        public event EventHandler<ChunkProcessedEventHandlerArgs> ChunkProcessed;
+        public event EventHandler<ChunkProcessedEventHandlerArgs>? ChunkProcessed;
 
         public int BufferSize { get; private set; }
 

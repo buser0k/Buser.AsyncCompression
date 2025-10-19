@@ -92,7 +92,7 @@ namespace Booser.AsyncCompression.Application.Services
 
         public static CompressionResult Failed(string errorMessage)
         {
-            return new CompressionResult(false, null, errorMessage);
+            return new CompressionResult(false, null!, errorMessage);
         }
     }
 }
