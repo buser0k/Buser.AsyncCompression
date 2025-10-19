@@ -37,15 +37,15 @@ public class CompressionIntegrationTests : IDisposable
     {
         // Arrange
         var factory = new CompressionJobFactory();
-        var inputPath = @"C:\test\input.txt";
+        var inputPath = Path.Combine("test", "input.txt");
 
         // Act
         var job = factory.CreateJob(inputPath);
 
         // Assert
         job.Should().NotBeNull();
-        job.InputFile.FullPath.Should().Be(inputPath);
-        job.OutputFile.FullPath.Should().Be(inputPath + ".gz");
+        job.InputFile.FullPath.Should().Be(Path.GetFullPath(inputPath));
+        job.OutputFile.FullPath.Should().Be(Path.GetFullPath(inputPath) + ".gz");
         job.Status.Should().Be(CompressionStatus.Created);
     }
 

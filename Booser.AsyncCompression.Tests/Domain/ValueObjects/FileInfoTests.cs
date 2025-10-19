@@ -10,13 +10,13 @@ public class FileInfoTests
     public void Constructor_WithValidPath_ShouldCreateFileInfo()
     {
         // Arrange
-        var filePath = @"C:\test\file.txt";
+        var filePath = Path.Combine("test", "file.txt");
 
         // Act
         var fileInfo = new Booser.AsyncCompression.Domain.ValueObjects.FileInfo(filePath);
 
         // Assert
-        fileInfo.FullPath.Should().Be(filePath);
+        fileInfo.FullPath.Should().Be(Path.GetFullPath(filePath));
         fileInfo.Name.Should().Be("file.txt");
         // Note: Extension and Directory properties are not available in the current implementation
     }
@@ -38,9 +38,9 @@ public class FileInfoTests
     }
 
     [Theory]
-    [InlineData(@"C:\test\file.txt", "file.txt")]
-    [InlineData(@"C:\test\subfolder\document.pdf", "document.pdf")]
-    [InlineData(@"file.txt", "file.txt")]
+    [InlineData("test/file.txt", "file.txt")]
+    [InlineData("test/subfolder/document.pdf", "document.pdf")]
+    [InlineData("file.txt", "file.txt")]
     public void Name_ShouldExtractCorrectFileName(string filePath, string expectedName)
     {
         // Act
@@ -56,13 +56,13 @@ public class FileInfoTests
     public void ToString_ShouldReturnFullPath()
     {
         // Arrange
-        var filePath = @"C:\test\file.txt";
+        var filePath = Path.Combine("test", "file.txt");
         var fileInfo = new Booser.AsyncCompression.Domain.ValueObjects.FileInfo(filePath);
 
         // Act
         var result = fileInfo.ToString();
 
         // Assert
-        result.Should().Be(filePath);
+        result.Should().Be(Path.GetFullPath(filePath));
     }
 }

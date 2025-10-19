@@ -19,14 +19,14 @@ public class CompressionJobFactoryTests
     public void CreateJob_WithValidInputPath_ShouldCreateJob()
     {
         // Arrange
-        var inputFilePath = @"C:\test\input.txt";
+        var inputFilePath = Path.Combine("test", "input.txt");
 
         // Act
         var job = _factory.CreateJob(inputFilePath);
 
         // Assert
         job.Should().NotBeNull();
-        job.InputFile.FullPath.Should().Be(inputFilePath);
+        job.InputFile.FullPath.Should().Be(Path.GetFullPath(inputFilePath));
         job.OutputFile.FullPath.Should().EndWith(".gz");
         job.Settings.BufferSize.Should().Be(CompressionSettings.Default.BufferSize);
         job.Settings.MaxBufferSize.Should().Be(CompressionSettings.Default.MaxBufferSize);
@@ -37,7 +37,7 @@ public class CompressionJobFactoryTests
     public void CreateJob_WithCustomSettings_ShouldUseCustomSettings()
     {
         // Arrange
-        var inputFilePath = @"C:\test\input.txt";
+        var inputFilePath = Path.Combine("test", "input.txt");
         var customSettings = new CompressionSettings(2048, 8192);
 
         // Act
@@ -46,8 +46,8 @@ public class CompressionJobFactoryTests
         // Assert
         job.Should().NotBeNull();
         job.Settings.Should().Be(customSettings);
-        job.InputFile.FullPath.Should().Be(inputFilePath);
-        job.OutputFile.FullPath.Should().Be(inputFilePath + ".gz");
+        job.InputFile.FullPath.Should().Be(Path.GetFullPath(inputFilePath));
+        job.OutputFile.FullPath.Should().Be(Path.GetFullPath(inputFilePath) + ".gz");
     }
 
     [Fact]
@@ -67,9 +67,9 @@ public class CompressionJobFactoryTests
     }
 
     [Theory]
-    [InlineData(@"C:\test\file.txt")]
-    [InlineData(@"C:\test\document.pdf")]
-    [InlineData(@"file.txt")]
+    [InlineData("test/file.txt")]
+    [InlineData("test/document.pdf")]
+    [InlineData("file.txt")]
     public void CreateJob_ShouldGenerateCorrectOutputPath(string inputPath)
     {
         // Act
@@ -85,7 +85,7 @@ public class CompressionJobFactoryTests
     public void CreateJob_WithNullSettings_ShouldUseDefaultSettings()
     {
         // Arrange
-        var inputFilePath = @"C:\test\input.txt";
+        var inputFilePath = Path.Combine("test", "input.txt");
 
         // Act
         var job = _factory.CreateJob(inputFilePath, null);
@@ -101,7 +101,7 @@ public class CompressionJobFactoryTests
     public void CreateJob_ShouldCreateUniqueJobIds()
     {
         // Arrange
-        var inputFilePath = @"C:\test\input.txt";
+        var inputFilePath = Path.Combine("test", "input.txt");
 
         // Act
         var job1 = _factory.CreateJob(inputFilePath);
