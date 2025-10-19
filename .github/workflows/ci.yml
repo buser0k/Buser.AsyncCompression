@@ -147,7 +147,7 @@ jobs:
     - name: Publish packages
       run: |
         if [ -n "$NUGET_API_KEY" ]; then
-          dotnet cake build.cake --target=Publish
+          dotnet cake build.cake --target=Publish --nugetApiKey="$NUGET_API_KEY"
         else
           echo "NUGET_API_KEY not set, skipping publish"
         fi
