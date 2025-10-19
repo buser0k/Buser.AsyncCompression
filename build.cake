@@ -91,8 +91,11 @@ Task("TestResults")
             Information("Skipping ReportGenerator on non-Windows platform to avoid cross-platform compatibility issues.");
         }
         
-        // Copy test results
-        CopyFiles($"{testResultsDir}/**/*", testResultsDir);
+        // Copy test results (skip if source and destination are the same)
+        if (!DirectoryExists(testResultsDir))
+        {
+            CreateDirectory(testResultsDir);
+        }
     });
 
 // Package application
