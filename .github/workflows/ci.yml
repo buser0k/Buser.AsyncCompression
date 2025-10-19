@@ -145,7 +145,7 @@ jobs:
         dotnet tool install --global Cake.Tool --version ${{ env.CAKE_VERSION }}
 
     - name: Publish packages
-      if: ${{ secrets.NUGET_API_KEY != '' }}
+      if: ${{ secrets.NUGET_API_KEY }}
       run: dotnet cake build.cake --target=Publish
       env:
         NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
