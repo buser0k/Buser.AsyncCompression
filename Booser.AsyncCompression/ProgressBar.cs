@@ -1,9 +1,9 @@
 using System;
 using System.Text;
 using System.Threading;
-using Booser.AsyncCompression.Domain.Interfaces;
+using Buser.AsyncCompression.Domain.Interfaces;
 
-namespace Booser.AsyncCompression
+namespace Buser.AsyncCompression
 {
     public class ProgressBar : IDisposable, IProgress<double>, IProgressReporter
     {

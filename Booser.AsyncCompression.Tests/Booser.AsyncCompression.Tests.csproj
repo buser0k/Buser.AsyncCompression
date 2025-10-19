@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Booser.AsyncCompression\Booser.AsyncCompression.csproj" />
+    <ProjectReference Include="..\Buser.AsyncCompression\Buser.AsyncCompression.csproj" />
   </ItemGroup>
 
 </Project>

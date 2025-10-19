@@ -3,10 +3,10 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using Booser.AsyncCompression.Domain.Entities;
-using Booser.AsyncCompression.Domain.Interfaces;
+using Buser.AsyncCompression.Domain.Entities;
+using Buser.AsyncCompression.Domain.Interfaces;
 
-namespace Booser.AsyncCompression.Application.Services
+namespace Buser.AsyncCompression.Application.Services
 {
     public class CompressionService : ICompressionService
     {

@@ -1,6 +1,6 @@
-using Booser.AsyncCompression.Domain.Interfaces;
+using Buser.AsyncCompression.Domain.Interfaces;
 
-namespace Booser.AsyncCompression.Application.Factories
+namespace Buser.AsyncCompression.Application.Factories
 {
     public class CompressionAlgorithmFactory
     {

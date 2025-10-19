@@ -1,13 +1,13 @@
 using System;
-using Booser.AsyncCompression.Domain.ValueObjects;
+using Buser.AsyncCompression.Domain.ValueObjects;
 
-namespace Booser.AsyncCompression.Domain.Entities
+namespace Buser.AsyncCompression.Domain.Entities
 {
     public class CompressionJob
     {
         public Guid Id { get; }
-        public Booser.AsyncCompression.Domain.ValueObjects.FileInfo InputFile { get; }
-        public Booser.AsyncCompression.Domain.ValueObjects.FileInfo OutputFile { get; }
+        public Buser.AsyncCompression.Domain.ValueObjects.FileInfo InputFile { get; }
+        public Buser.AsyncCompression.Domain.ValueObjects.FileInfo OutputFile { get; }
         public CompressionSettings Settings { get; }
         public CompressionStatus Status { get; private set; }
         public DateTime CreatedAt { get; }
@@ -16,7 +16,7 @@ namespace Booser.AsyncCompression.Domain.Entities
         public long ProcessedBytes { get; private set; }
         public double ProgressPercentage => InputFile.Size > 0 ? (double)ProcessedBytes / InputFile.Size : 0;
 
-        public CompressionJob(Booser.AsyncCompression.Domain.ValueObjects.FileInfo inputFile, Booser.AsyncCompression.Domain.ValueObjects.FileInfo outputFile, CompressionSettings settings)
+        public CompressionJob(Buser.AsyncCompression.Domain.ValueObjects.FileInfo inputFile, Buser.AsyncCompression.Domain.ValueObjects.FileInfo outputFile, CompressionSettings settings)
         {
             Id = Guid.NewGuid();
             InputFile = inputFile ?? throw new ArgumentNullException(nameof(inputFile));

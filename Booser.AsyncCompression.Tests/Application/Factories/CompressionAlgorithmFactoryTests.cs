@@ -1,9 +1,9 @@
-using Booser.AsyncCompression.Application.Factories;
-using Booser.AsyncCompression.Domain.Interfaces;
+using Buser.AsyncCompression.Application.Factories;
+using Buser.AsyncCompression.Domain.Interfaces;
 using FluentAssertions;
 using Xunit;
 
-namespace Booser.AsyncCompression.Tests.Application.Factories;
+namespace Buser.AsyncCompression.Tests.Application.Factories;
 
 public class CompressionAlgorithmFactoryTests
 {

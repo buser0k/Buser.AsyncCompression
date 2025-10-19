@@ -1,20 +1,20 @@
-using Booser.AsyncCompression.Domain.Entities;
-using Booser.AsyncCompression.Domain.ValueObjects;
+using Buser.AsyncCompression.Domain.Entities;
+using Buser.AsyncCompression.Domain.ValueObjects;
 using FluentAssertions;
 using Xunit;
 
-namespace Booser.AsyncCompression.Tests.Domain.Entities;
+namespace Buser.AsyncCompression.Tests.Domain.Entities;
 
 public class CompressionJobTests
 {
-    private readonly Booser.AsyncCompression.Domain.ValueObjects.FileInfo _inputFile;
-    private readonly Booser.AsyncCompression.Domain.ValueObjects.FileInfo _outputFile;
+    private readonly Buser.AsyncCompression.Domain.ValueObjects.FileInfo _inputFile;
+    private readonly Buser.AsyncCompression.Domain.ValueObjects.FileInfo _outputFile;
     private readonly CompressionSettings _settings;
 
     public CompressionJobTests()
     {
-        _inputFile = new Booser.AsyncCompression.Domain.ValueObjects.FileInfo(@"C:\test\input.txt");
-        _outputFile = new Booser.AsyncCompression.Domain.ValueObjects.FileInfo(@"C:\test\output.txt.gz");
+        _inputFile = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(@"C:\test\input.txt");
+        _outputFile = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(@"C:\test\output.txt.gz");
         _settings = CompressionSettings.Default;
     }
 
@@ -142,7 +142,7 @@ public class CompressionJobTests
     public void UpdateProgress_WhenStatusIsRunning_ShouldUpdateProcessedBytes()
     {
         // Arrange
-        var inputFile = new Booser.AsyncCompression.Domain.ValueObjects.FileInfo(@"C:\test\input.txt");
+        var inputFile = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(@"C:\test\input.txt");
         var job = new CompressionJob(inputFile, _outputFile, _settings);
         job.Start();
         var processedBytes = 1024L;

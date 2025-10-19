@@ -1,10 +1,10 @@
-using Booser.AsyncCompression.Application.Factories;
-using Booser.AsyncCompression.Domain.Entities;
-using Booser.AsyncCompression.Domain.ValueObjects;
+using Buser.AsyncCompression.Application.Factories;
+using Buser.AsyncCompression.Domain.Entities;
+using Buser.AsyncCompression.Domain.ValueObjects;
 using FluentAssertions;
 using Xunit;
 
-namespace Booser.AsyncCompression.Tests.Application.Factories;
+namespace Buser.AsyncCompression.Tests.Application.Factories;
 
 public class CompressionJobFactoryTests
 {

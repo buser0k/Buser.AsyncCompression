@@ -1,4 +1,4 @@
-# Быстрый старт Booser.AsyncCompression
+# Быстрый старт Buser.AsyncCompression
 
 ## 🚀 Запуск за 5 минут
 
@@ -9,7 +9,7 @@
 ### 2. Клонирование и сборка
 ```bash
 git clone <repository-url>
-cd Booser.AsyncCompression
+cd Buser.AsyncCompression
 dotnet build
 ```
 
@@ -39,7 +39,7 @@ ls *.gz
 ## 📁 Структура проекта
 
 ```
-Booser.AsyncCompression/
+Buser.AsyncCompression/
 ├── 📁 Application/          # Слой приложения
 ├── 📁 Domain/              # Доменный слой
 ├── 📁 Infrastructure/      # Инфраструктурный слой

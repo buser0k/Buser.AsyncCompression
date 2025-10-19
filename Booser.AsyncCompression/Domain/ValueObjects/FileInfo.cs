@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace Booser.AsyncCompression.Domain.ValueObjects
+namespace Buser.AsyncCompression.Domain.ValueObjects
 {
     public class FileInfo
     {

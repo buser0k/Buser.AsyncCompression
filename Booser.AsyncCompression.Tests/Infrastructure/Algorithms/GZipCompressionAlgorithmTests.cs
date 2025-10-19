@@ -1,8 +1,8 @@
-using Booser.AsyncCompression.Infrastructure.Algorithms;
+using Buser.AsyncCompression.Infrastructure.Algorithms;
 using FluentAssertions;
 using Xunit;
 
-namespace Booser.AsyncCompression.Tests.Infrastructure.Algorithms;
+namespace Buser.AsyncCompression.Tests.Infrastructure.Algorithms;
 
 public class GZipCompressionAlgorithmTests
 {

@@ -1,4 +1,4 @@
-namespace Booser.AsyncCompression.Domain.Interfaces
+namespace Buser.AsyncCompression.Domain.Interfaces
 {
     public interface ICompressionAlgorithm
     {

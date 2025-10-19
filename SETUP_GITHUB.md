@@ -5,7 +5,7 @@
 1. Перейдите на [GitHub](https://github.com/buser0k?tab=repositories)
 2. Нажмите кнопку "New" для создания нового репозитория
 3. Заполните данные:
-   - **Repository name**: `Booser.AsyncCompression`
+   - **Repository name**: `Buser.AsyncCompression`
    - **Description**: `High-performance async file compression application with Clean Architecture and comprehensive test suite`
    - **Visibility**: Public (или Private по желанию)
    - **Initialize**: НЕ отмечайте "Add a README file" (у нас уже есть)
@@ -16,7 +16,7 @@
 
 ```bash
 # Добавьте remote origin (замените YOUR_USERNAME на ваш GitHub username)
-git remote add origin https://github.com/buser0k/Booser.AsyncCompression.git
+git remote add origin https://github.com/buser0k/Buser.AsyncCompression.git
 
 # Переименуйте ветку в main (если нужно)
 git branch -M main
@@ -47,12 +47,12 @@ git push -u origin main
 После настройки ваш репозиторий будет содержать:
 
 ```
-Booser.AsyncCompression/
+Buser.AsyncCompression/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml              # GitHub Actions pipeline
-├── Booser.AsyncCompression/    # Основной проект
-├── Booser.AsyncCompression.Tests/ # Тесты
+├── Buser.AsyncCompression/    # Основной проект
+├── Buser.AsyncCompression.Tests/ # Тесты
 ├── build.cake                  # Cake build script
 ├── build.ps1                   # PowerShell скрипт для Windows
 ├── build.sh                    # Bash скрипт для Unix/Linux

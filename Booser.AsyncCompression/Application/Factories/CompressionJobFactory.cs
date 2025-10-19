@@ -1,7 +1,7 @@
-using Booser.AsyncCompression.Domain.Entities;
-using Booser.AsyncCompression.Domain.ValueObjects;
+using Buser.AsyncCompression.Domain.Entities;
+using Buser.AsyncCompression.Domain.ValueObjects;
 
-namespace Booser.AsyncCompression.Application.Factories
+namespace Buser.AsyncCompression.Application.Factories
 {
     public class CompressionJobFactory
     {

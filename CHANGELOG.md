@@ -1,6 +1,6 @@
 # История изменений
 
-Все значимые изменения в проекте Booser.AsyncCompression будут документированы в этом файле.
+Все значимые изменения в проекте Buser.AsyncCompression будут документированы в этом файле.
 
 Формат основан на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 и проект следует [Semantic Versioning](https://semver.org/spec/v2.0.0.html).

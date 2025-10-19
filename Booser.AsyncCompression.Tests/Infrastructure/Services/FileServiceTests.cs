@@ -1,9 +1,9 @@
-using Booser.AsyncCompression.Domain.ValueObjects;
-using Booser.AsyncCompression.Infrastructure.Services;
+using Buser.AsyncCompression.Domain.ValueObjects;
+using Buser.AsyncCompression.Infrastructure.Services;
 using FluentAssertions;
 using Xunit;
 
-namespace Booser.AsyncCompression.Tests.Infrastructure.Services;
+namespace Buser.AsyncCompression.Tests.Infrastructure.Services;
 
 public class FileServiceTests : IDisposable
 {
@@ -21,7 +21,7 @@ public class FileServiceTests : IDisposable
     {
         // Arrange
         var tempFile = CreateTempFile("test content");
-        var fileInfo = new Booser.AsyncCompression.Domain.ValueObjects.FileInfo(tempFile);
+        var fileInfo = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(tempFile);
 
         // Act
         using var stream = await _service.OpenReadAsync(fileInfo);
@@ -36,7 +36,7 @@ public class FileServiceTests : IDisposable
     {
         // Arrange
         var nonExistentFile = @"C:\non\existent\file.txt";
-        var fileInfo = new Booser.AsyncCompression.Domain.ValueObjects.FileInfo(nonExistentFile);
+        var fileInfo = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(nonExistentFile);
 
         // Act & Assert
         var action = async () => await _service.OpenReadAsync(fileInfo);
@@ -48,7 +48,7 @@ public class FileServiceTests : IDisposable
     {
         // Arrange
         var tempFile = GetTempFilePath();
-        var fileInfo = new Booser.AsyncCompression.Domain.ValueObjects.FileInfo(tempFile);
+        var fileInfo = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(tempFile);
 
         // Act
         using var stream = await _service.CreateAsync(fileInfo);
@@ -63,7 +63,7 @@ public class FileServiceTests : IDisposable
     {
         // Arrange
         var tempFile = CreateTempFile("test content");
-        var fileInfo = new Booser.AsyncCompression.Domain.ValueObjects.FileInfo(tempFile);
+        var fileInfo = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(tempFile);
 
         // Act
         var exists = await _service.ExistsAsync(fileInfo);
@@ -77,7 +77,7 @@ public class FileServiceTests : IDisposable
     {
         // Arrange
         var nonExistentFile = @"C:\non\existent\file.txt";
-        var fileInfo = new Booser.AsyncCompression.Domain.ValueObjects.FileInfo(nonExistentFile);
+        var fileInfo = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(nonExistentFile);
 
         // Act
         var exists = await _service.ExistsAsync(fileInfo);
@@ -91,7 +91,7 @@ public class FileServiceTests : IDisposable
     {
         // Arrange
         var tempFile = CreateTempFile("test content");
-        var fileInfo = new Booser.AsyncCompression.Domain.ValueObjects.FileInfo(tempFile);
+        var fileInfo = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(tempFile);
 
         // Act
         await _service.DeleteAsync(fileInfo);
@@ -105,7 +105,7 @@ public class FileServiceTests : IDisposable
     {
         // Arrange
         var nonExistentFile = @"C:\non\existent\file.txt";
-        var fileInfo = new Booser.AsyncCompression.Domain.ValueObjects.FileInfo(nonExistentFile);
+        var fileInfo = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(nonExistentFile);
 
         // Act & Assert
         var action = async () => await _service.DeleteAsync(fileInfo);

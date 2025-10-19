@@ -1,8 +1,8 @@
 using System.IO;
 using System.IO.Compression;
-using Booser.AsyncCompression.Domain.Interfaces;
+using Buser.AsyncCompression.Domain.Interfaces;
 
-namespace Booser.AsyncCompression.Infrastructure.Algorithms
+namespace Buser.AsyncCompression.Infrastructure.Algorithms
 {
     public class GZipCompressionAlgorithm : ICompressionAlgorithm
     {

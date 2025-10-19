@@ -3,9 +3,9 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using Booser.AsyncCompression.Domain.Interfaces;
+using Buser.AsyncCompression.Domain.Interfaces;
 
-namespace Booser.AsyncCompression
+namespace Buser.AsyncCompression
 {
     class TaskCompression
     {

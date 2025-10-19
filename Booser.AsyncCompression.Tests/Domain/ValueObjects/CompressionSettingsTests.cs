@@ -1,8 +1,8 @@
-using Booser.AsyncCompression.Domain.ValueObjects;
+using Buser.AsyncCompression.Domain.ValueObjects;
 using FluentAssertions;
 using Xunit;
 
-namespace Booser.AsyncCompression.Tests.Domain.ValueObjects;
+namespace Buser.AsyncCompression.Tests.Domain.ValueObjects;
 
 public class CompressionSettingsTests
 {

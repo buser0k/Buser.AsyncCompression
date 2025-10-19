@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
-using Booser.AsyncCompression.Domain.Entities;
+using Buser.AsyncCompression.Domain.Entities;
 
-namespace Booser.AsyncCompression.Domain.Interfaces
+namespace Buser.AsyncCompression.Domain.Interfaces
 {
     public interface ICompressionService
     {

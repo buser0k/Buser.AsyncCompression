@@ -1,12 +1,12 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Booser.AsyncCompression.Application.Factories;
-using Booser.AsyncCompression.Domain.Entities;
-using Booser.AsyncCompression.Domain.Interfaces;
-using Booser.AsyncCompression.Domain.ValueObjects;
+using Buser.AsyncCompression.Application.Factories;
+using Buser.AsyncCompression.Domain.Entities;
+using Buser.AsyncCompression.Domain.Interfaces;
+using Buser.AsyncCompression.Domain.ValueObjects;
 
-namespace Booser.AsyncCompression.Application.Services
+namespace Buser.AsyncCompression.Application.Services
 {
     public class CompressionApplicationService
     {

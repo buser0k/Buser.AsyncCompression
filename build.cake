@@ -3,9 +3,9 @@
 
 var target = Argument("target", "Default");
 var configuration = Argument("configuration", "Release");
-var solutionPath = "./Booser.AsyncCompression.sln";
-var projectPath = "./Booser.AsyncCompression/Booser.AsyncCompression.csproj";
-var testProjectPath = "./Booser.AsyncCompression.Tests/Booser.AsyncCompression.Tests.csproj";
+var solutionPath = "./Buser.AsyncCompression.sln";
+var projectPath = "./Buser.AsyncCompression/Buser.AsyncCompression.csproj";
+var testProjectPath = "./Buser.AsyncCompression.Tests/Buser.AsyncCompression.Tests.csproj";
 var outputDir = "./artifacts";
 var testResultsDir = "./test-results";
 var coverageDir = "./coverage";
@@ -117,7 +117,7 @@ Task("Package")
         DotNetPublish(projectPath, publishSettings);
         
         // Create zip package
-        Zip($"{outputDir}/publish", $"{outputDir}/Booser.AsyncCompression-{configuration}.zip");
+        Zip($"{outputDir}/publish", $"{outputDir}/Buser.AsyncCompression-{configuration}.zip");
     });
 
 // Publish to NuGet (if API key is provided)

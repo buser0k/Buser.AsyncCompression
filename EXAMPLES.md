@@ -1,4 +1,4 @@
-# Примеры использования Booser.AsyncCompression
+# Примеры использования Buser.AsyncCompression
 
 ## 🚀 Базовые примеры
 
@@ -83,22 +83,22 @@ public class CloudFileService : IFileService
         _cloudClient = cloudClient;
     }
 
-    public async Task<Stream> OpenReadAsync(Booser.AsyncCompression.Domain.ValueObjects.FileInfo file)
+    public async Task<Stream> OpenReadAsync(Buser.AsyncCompression.Domain.ValueObjects.FileInfo file)
     {
         return await _cloudClient.DownloadStreamAsync(file.FullPath);
     }
 
-    public async Task<Stream> CreateAsync(Booser.AsyncCompression.Domain.ValueObjects.FileInfo file)
+    public async Task<Stream> CreateAsync(Buser.AsyncCompression.Domain.ValueObjects.FileInfo file)
     {
         return new CloudUploadStream(_cloudClient, file.FullPath);
     }
 
-    public async Task<bool> ExistsAsync(Booser.AsyncCompression.Domain.ValueObjects.FileInfo file)
+    public async Task<bool> ExistsAsync(Buser.AsyncCompression.Domain.ValueObjects.FileInfo file)
     {
         return await _cloudClient.ExistsAsync(file.FullPath);
     }
 
-    public async Task DeleteAsync(Booser.AsyncCompression.Domain.ValueObjects.FileInfo file)
+    public async Task DeleteAsync(Buser.AsyncCompression.Domain.ValueObjects.FileInfo file)
     {
         await _cloudClient.DeleteAsync(file.FullPath);
     }
@@ -541,4 +541,4 @@ var balancedSettings = new CompressionSettings(
 );
 ```
 
-Эти примеры демонстрируют гибкость и расширяемость архитектуры Booser.AsyncCompression, позволяя адаптировать приложение под различные сценарии использования.
+Эти примеры демонстрируют гибкость и расширяемость архитектуры Buser.AsyncCompression, позволяя адаптировать приложение под различные сценарии использования.

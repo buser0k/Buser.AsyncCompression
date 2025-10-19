@@ -1,4 +1,4 @@
-# Технические спецификации Booser.AsyncCompression
+# Технические спецификации Buser.AsyncCompression
 
 ## 🖥️ Системные требования
 
@@ -97,7 +97,7 @@ export LOG_LEVEL=Information
 ```bash
 # Клонирование репозитория
 git clone <repository-url>
-cd Booser.AsyncCompression
+cd Buser.AsyncCompression
 
 # Восстановление зависимостей
 dotnet restore
@@ -134,7 +134,7 @@ WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-COPY ["Booser.AsyncCompression.csproj", "."]
+COPY ["Buser.AsyncCompression.csproj", "."]
 RUN dotnet restore
 COPY . .
 WORKDIR "/src"
@@ -146,7 +146,7 @@ RUN dotnet publish -c Release -o /app/publish
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Booser.AsyncCompression.dll"]
+ENTRYPOINT ["dotnet", "Buser.AsyncCompression.dll"]
 ```
 
 ## 📊 Производительность

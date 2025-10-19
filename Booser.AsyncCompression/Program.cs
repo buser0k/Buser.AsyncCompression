@@ -4,13 +4,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using Booser.AsyncCompression.Application.Factories;
-using Booser.AsyncCompression.Application.Services;
-using Booser.AsyncCompression.Domain.Interfaces;
-using Booser.AsyncCompression.Domain.ValueObjects;
-using Booser.AsyncCompression.Infrastructure.DI;
+using Buser.AsyncCompression.Application.Factories;
+using Buser.AsyncCompression.Application.Services;
+using Buser.AsyncCompression.Domain.Interfaces;
+using Buser.AsyncCompression.Domain.ValueObjects;
+using Buser.AsyncCompression.Infrastructure.DI;
 
-namespace Booser.AsyncCompression
+namespace Buser.AsyncCompression
 {
     static class Program
     {

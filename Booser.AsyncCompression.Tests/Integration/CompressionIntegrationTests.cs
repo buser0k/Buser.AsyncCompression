@@ -1,15 +1,15 @@
-using Booser.AsyncCompression.Application.Factories;
-using Booser.AsyncCompression.Domain.Entities;
-using Booser.AsyncCompression.Domain.Interfaces;
-using Booser.AsyncCompression.Domain.ValueObjects;
-using Booser.AsyncCompression.Infrastructure.Algorithms;
-using Booser.AsyncCompression.Infrastructure.DI;
-using Booser.AsyncCompression.Infrastructure.Services;
+using Buser.AsyncCompression.Application.Factories;
+using Buser.AsyncCompression.Domain.Entities;
+using Buser.AsyncCompression.Domain.Interfaces;
+using Buser.AsyncCompression.Domain.ValueObjects;
+using Buser.AsyncCompression.Infrastructure.Algorithms;
+using Buser.AsyncCompression.Infrastructure.DI;
+using Buser.AsyncCompression.Infrastructure.Services;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace Booser.AsyncCompression.Tests.Integration;
+namespace Buser.AsyncCompression.Tests.Integration;
 
 public class CompressionIntegrationTests : IDisposable
 {
@@ -72,7 +72,7 @@ public class CompressionIntegrationTests : IDisposable
         var fileService = new FileService();
         var testContent = "Test file content";
         var tempFile = CreateTempFile(testContent);
-        var fileInfo = new Booser.AsyncCompression.Domain.ValueObjects.FileInfo(tempFile);
+        var fileInfo = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(tempFile);
 
         // Act & Assert
         var exists = await fileService.ExistsAsync(fileInfo);
