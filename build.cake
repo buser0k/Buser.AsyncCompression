@@ -74,14 +74,21 @@ Task("TestResults")
     {
         Information("Generating test results and coverage report...");
         
-        // Generate coverage report
-        var coverageFiles = GetFiles($"{testResultsDir}/**/coverage.cobertura.xml");
-        if (coverageFiles.Any())
+        // Generate coverage report (only on Windows to avoid cross-platform issues)
+        if (IsRunningOnWindows())
         {
-            ReportGenerator(coverageFiles, coverageDir, new ReportGeneratorSettings
+            var coverageFiles = GetFiles($"{testResultsDir}/**/coverage.cobertura.xml");
+            if (coverageFiles.Any())
             {
-                ReportTypes = new[] { ReportGeneratorReportType.Html, ReportGeneratorReportType.Cobertura }
-            });
+                ReportGenerator(coverageFiles, coverageDir, new ReportGeneratorSettings
+                {
+                    ReportTypes = new[] { ReportGeneratorReportType.Html, ReportGeneratorReportType.Cobertura }
+                });
+            }
+        }
+        else
+        {
+            Information("Skipping ReportGenerator on non-Windows platform to avoid cross-platform compatibility issues.");
         }
         
         // Copy test results
