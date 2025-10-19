@@ -7,8 +7,8 @@ namespace Buser.AsyncCompression.Application.Factories
     {
         public CompressionJob CreateJob(string inputFilePath, CompressionSettings? settings = null)
         {
-            var inputFile = new Booser.AsyncCompression.Domain.ValueObjects.FileInfo(inputFilePath);
-            var outputFile = new Booser.AsyncCompression.Domain.ValueObjects.FileInfo(inputFilePath + ".gz");
+            var inputFile = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(inputFilePath);
+            var outputFile = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(inputFilePath + ".gz");
             var compressionSettings = settings ?? CompressionSettings.Default;
 
             return new CompressionJob(inputFile, outputFile, compressionSettings);
