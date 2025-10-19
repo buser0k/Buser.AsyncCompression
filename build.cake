@@ -143,7 +143,7 @@ Task("Publish")
         var packages = GetFiles($"{outputDir}/*.nupkg");
         foreach (var package in packages)
         {
-            NuGetPush(package, new NuGetPushSettings
+            DotNetNuGetPush(package.FullPath, new DotNetNuGetPushSettings
             {
                 Source = "https://api.nuget.org/v3/index.json",
                 ApiKey = nugetApiKey
