@@ -10,6 +10,10 @@ env:
   DOTNET_VERSION: '8.0.x' # Using .NET 8 for compatibility
   CAKE_VERSION: '3.0.0'
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -155,11 +159,12 @@ jobs:
         NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
 
     - name: Create Release
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: v${{ github.run_number }}
-        release_name: Release v${{ github.run_number }}
+        name: Release v${{ github.run_number }}
         draft: false
         prerelease: false
+        generate_release_notes: true
