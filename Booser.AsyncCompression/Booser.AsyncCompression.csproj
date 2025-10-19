@@ -7,6 +7,18 @@
     <Nullable>enable</Nullable>
     <RootNamespace>Booser.AsyncCompression</RootNamespace>
     <AssemblyName>Booser.AsyncCompression</AssemblyName>
+    
+    <!-- NuGet Package Properties -->
+    <PackageId>Booser.AsyncCompression</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Buser</Authors>
+    <Description>Async compression library with progress reporting and cross-platform support</Description>
+    <PackageTags>compression;async;gzip;progress</PackageTags>
+    <PackageProjectUrl>https://github.com/buser0k/Buser.AsyncCompression</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/buser0k/Buser.AsyncCompression</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
