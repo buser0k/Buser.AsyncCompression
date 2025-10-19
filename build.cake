@@ -109,7 +109,7 @@ Task("Package")
         {
             Configuration = configuration,
             OutputDirectory = $"{outputDir}/publish",
-            SelfContained = false,
+            SelfContained = true,
             PublishSingleFile = true,
             PublishTrimmed = true
         };
