@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Buser.AsyncCompression.Application.Factories;
 using Buser.AsyncCompression.Application.Services;
 using Buser.AsyncCompression.Domain.Entities;
 using Buser.AsyncCompression.Domain.Interfaces;
@@ -9,6 +10,7 @@ using Buser.AsyncCompression.Domain.ValueObjects;
 using Buser.AsyncCompression.Infrastructure.Algorithms;
 using Buser.AsyncCompression.Infrastructure.Services;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -28,10 +30,14 @@ public class CompressionServiceTests : IDisposable
         _mockProgressReporter = new Mock<IProgressReporter>();
         _compressionAlgorithm = new GZipCompressionAlgorithm();
         _fileService = new FileService();
+        var mockLogger = new Mock<ILogger<CompressionService>>();
+        var algorithmFactory = new CompressionAlgorithmFactory();
         _compressionService = new CompressionService(
             _compressionAlgorithm,
             _fileService,
-            _mockProgressReporter.Object);
+            _mockProgressReporter.Object,
+            mockLogger.Object,
+            algorithmFactory);
 
         // Create temporary test file
         _tempInputFile = Path.GetTempFileName();
@@ -42,23 +48,35 @@ public class CompressionServiceTests : IDisposable
     [Fact]
     public void Constructor_WithNullAlgorithm_ShouldThrowArgumentNullException()
     {
+        // Arrange
+        var mockLogger = new Mock<ILogger<CompressionService>>();
+        var algorithmFactory = new CompressionAlgorithmFactory();
+
         // Act & Assert
         var action = () => new CompressionService(
             null!,
             _fileService,
-            _mockProgressReporter.Object);
+            _mockProgressReporter.Object,
+            mockLogger.Object,
+            algorithmFactory);
         action.Should().Throw<ArgumentNullException>()
-            .WithParameterName("compressionAlgorithm");
+            .WithParameterName("defaultCompressionAlgorithm");
     }
 
     [Fact]
     public void Constructor_WithNullFileService_ShouldThrowArgumentNullException()
     {
+        // Arrange
+        var mockLogger = new Mock<ILogger<CompressionService>>();
+        var algorithmFactory = new CompressionAlgorithmFactory();
+
         // Act & Assert
         var action = () => new CompressionService(
             _compressionAlgorithm,
             null!,
-            _mockProgressReporter.Object);
+            _mockProgressReporter.Object,
+            mockLogger.Object,
+            algorithmFactory);
         action.Should().Throw<ArgumentNullException>()
             .WithParameterName("fileService");
     }
@@ -66,13 +84,53 @@ public class CompressionServiceTests : IDisposable
     [Fact]
     public void Constructor_WithNullProgressReporter_ShouldThrowArgumentNullException()
     {
+        // Arrange
+        var mockLogger = new Mock<ILogger<CompressionService>>();
+        var algorithmFactory = new CompressionAlgorithmFactory();
+
         // Act & Assert
         var action = () => new CompressionService(
             _compressionAlgorithm,
             _fileService,
-            null!);
+            null!,
+            mockLogger.Object,
+            algorithmFactory);
         action.Should().Throw<ArgumentNullException>()
             .WithParameterName("progressReporter");
+    }
+
+    [Fact]
+    public void Constructor_WithNullLogger_ShouldThrowArgumentNullException()
+    {
+        // Arrange
+        var algorithmFactory = new CompressionAlgorithmFactory();
+
+        // Act & Assert
+        var action = () => new CompressionService(
+            _compressionAlgorithm,
+            _fileService,
+            _mockProgressReporter.Object,
+            null!,
+            algorithmFactory);
+        action.Should().Throw<ArgumentNullException>()
+            .WithParameterName("logger");
+    }
+
+    [Fact]
+    public void Constructor_WithNullAlgorithmFactory_ShouldThrowArgumentNullException()
+    {
+        // Arrange
+        var mockLogger = new Mock<ILogger<CompressionService>>();
+
+        // Act & Assert
+        var action = () => new CompressionService(
+            _compressionAlgorithm,
+            _fileService,
+            _mockProgressReporter.Object,
+            mockLogger.Object,
+            null!);
+        action.Should().Throw<ArgumentNullException>()
+            .WithParameterName("algorithmFactory");
     }
 
     [Fact]
@@ -238,6 +296,27 @@ public class CompressionServiceTests : IDisposable
         try { File.Delete(tempFile2); } catch { }
         try { File.Delete(tempFile1 + ".gz"); } catch { }
         try { File.Delete(tempFile2 + ".gz"); } catch { }
+    }
+
+    [Fact]
+    public async Task CompressAsync_WithBrotliOutputFile_ShouldUseBrotliAlgorithm()
+    {
+        // Arrange
+        var inputFile = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(_tempInputFile);
+        var outputFile = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(_tempInputFile + ".br");
+        var settings = CompressionSettings.Default;
+        var job = new CompressionJob(inputFile, outputFile, settings);
+
+        // Act
+        var result = await _compressionService.CompressAsync(job);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Status.Should().Be(CompressionStatus.Completed);
+        File.Exists(_tempInputFile + ".br").Should().BeTrue();
+        
+        // Cleanup
+        try { File.Delete(_tempInputFile + ".br"); } catch { }
     }
 
     public void Dispose()

@@ -6,17 +6,27 @@ namespace Buser.AsyncCompression.Application.Factories
 {
     public class CompressionJobFactory
     {
-        private readonly ICompressionAlgorithm _compressionAlgorithm;
+        private readonly ICompressionAlgorithm _defaultCompressionAlgorithm;
+        private readonly CompressionAlgorithmFactory _algorithmFactory;
 
-        public CompressionJobFactory(ICompressionAlgorithm compressionAlgorithm)
+        public CompressionJobFactory(
+            ICompressionAlgorithm defaultCompressionAlgorithm,
+            CompressionAlgorithmFactory algorithmFactory)
         {
-            _compressionAlgorithm = compressionAlgorithm ?? throw new System.ArgumentNullException(nameof(compressionAlgorithm));
+            _defaultCompressionAlgorithm = defaultCompressionAlgorithm ?? throw new System.ArgumentNullException(nameof(defaultCompressionAlgorithm));
+            _algorithmFactory = algorithmFactory ?? throw new System.ArgumentNullException(nameof(algorithmFactory));
         }
 
-        public CompressionJob CreateJob(string inputFilePath, CompressionSettings? settings = null)
+        public CompressionJob CreateJob(string inputFilePath, CompressionSettings? settings = null, string? algorithmName = null)
         {
             var inputFile = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(inputFilePath);
-            var outputFilePath = inputFilePath + _compressionAlgorithm.FileExtension;
+            
+            // Use specified algorithm or default
+            ICompressionAlgorithm algorithm = string.IsNullOrEmpty(algorithmName)
+                ? _defaultCompressionAlgorithm
+                : _algorithmFactory.CreateAlgorithm(algorithmName);
+            
+            var outputFilePath = inputFilePath + algorithm.FileExtension;
             var outputFile = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(outputFilePath);
             var compressionSettings = settings ?? CompressionSettings.Default;
 
