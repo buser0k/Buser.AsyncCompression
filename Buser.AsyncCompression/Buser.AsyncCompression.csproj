@@ -11,6 +11,8 @@
     <!-- NuGet Package Properties -->
     <PackageId>Buser.AsyncCompression</PackageId>
     <Version>1.0.1</Version>
+    <AssemblyVersion>1.0.1</AssemblyVersion>
+    <FileVersion>1.0.1</FileVersion>
     <Authors>Buser</Authors>
     <Description>Async compression library with progress reporting and cross-platform support</Description>
     <PackageTags>compression;async;gzip;progress</PackageTags>

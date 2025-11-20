@@ -138,6 +138,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -148,23 +151,71 @@ jobs:
       run: |
         dotnet tool install --global Cake.Tool --version ${{ env.CAKE_VERSION }}
 
-    - name: Publish packages
+    - name: Determine version bump type
+      id: version
+      run: |
+        # Check commit messages to determine version bump type
+        # For merge commits, check the merge commit message and PR title
+        COMMIT_MSG=$(git log -1 --pretty=%B)
+        MERGE_COMMIT=$(git log -1 --pretty=%s)
+        
+        # Check for breaking changes or major version indicators
+        if echo "$COMMIT_MSG $MERGE_COMMIT" | grep -qiE "(breaking|major|BREAKING)"; then
+          echo "bump=major" >> $GITHUB_OUTPUT
+          echo "type=major" >> $GITHUB_OUTPUT
+          echo "Detected major version bump"
+        # Check for new features
+        elif echo "$COMMIT_MSG $MERGE_COMMIT" | grep -qiE "^(feat|feature):"; then
+          echo "bump=minor" >> $GITHUB_OUTPUT
+          echo "type=minor" >> $GITHUB_OUTPUT
+          echo "Detected minor version bump"
+        # Default to patch for fixes and other changes
+        else
+          echo "bump=patch" >> $GITHUB_OUTPUT
+          echo "type=patch" >> $GITHUB_OUTPUT
+          echo "Detected patch version bump"
+        fi
+
+    - name: Increment version and publish
       run: |
         if [ -n "$NUGET_API_KEY" ]; then
-          dotnet cake build.cake --target=Publish --nugetApiKey="$NUGET_API_KEY"
+          echo "Incrementing version (${{ steps.version.outputs.bump }}) and publishing..."
+          dotnet cake build.cake --target=Publish --nugetApiKey="$NUGET_API_KEY" --versionBump="${{ steps.version.outputs.bump }}"
         else
           echo "NUGET_API_KEY not set, skipping publish"
+          echo "This is expected for forks and when secret is not configured"
         fi
       env:
         NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
 
+    - name: Get new version
+      id: new_version
+      run: |
+        VERSION=$(grep -oP '<Version>\K[^<]+' Buser.AsyncCompression/Buser.AsyncCompression.csproj | head -1)
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "New version: $VERSION"
+
+    - name: Commit version update
+      if: env.NUGET_API_KEY != '' && steps.new_version.outputs.version != ''
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add Buser.AsyncCompression/Buser.AsyncCompression.csproj
+        if git diff --staged --quiet; then
+          echo "No version changes to commit"
+        else
+          git commit -m "chore: bump version to ${{ steps.new_version.outputs.version }} [skip ci]" || exit 0
+          git push || exit 0
+        fi
+
     - name: Create Release
+      if: env.NUGET_API_KEY != ''
       uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v${{ github.run_number }}
-        name: Release v${{ github.run_number }}
+        tag_name: v${{ steps.new_version.outputs.version }}
+        name: Release v${{ steps.new_version.outputs.version }}
         draft: false
         prerelease: false
         generate_release_notes: true
