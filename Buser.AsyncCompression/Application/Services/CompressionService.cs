@@ -33,8 +33,8 @@ namespace Buser.AsyncCompression.Application.Services
 
             try
             {
-                using (var inputStream = await _fileService.OpenReadAsync(job.InputFile))
-                using (var outputStream = await _fileService.CreateAsync(job.OutputFile))
+                using (var inputStream = await _fileService.OpenReadAsync(job.InputFile, job.CancellationToken))
+                using (var outputStream = await _fileService.CreateAsync(job.OutputFile, job.CancellationToken))
                 {
                     await ProcessCompressionAsync(job, inputStream, outputStream);
                 }
@@ -93,7 +93,6 @@ namespace Buser.AsyncCompression.Application.Services
             _ = compressor.Completion.ContinueWith(task => writer.Complete(), cancellationToken);
 
             var readBuffer = new byte[settings.BufferSize];
-            var semaphore = new SemaphoreSlim(1, 1);
 
             try
             {
@@ -111,18 +110,9 @@ namespace Buser.AsyncCompression.Application.Services
                         var postData = new byte[readCount];
                         Buffer.BlockCopy(readBuffer, 0, postData, 0, readCount);
 
-                        // Use semaphore for more efficient waiting
-                        while (!buffer.Post(postData) && !cancellationToken.IsCancellationRequested)
-                        {
-                            await semaphore.WaitAsync(10, cancellationToken);
-                            semaphore.Release();
-                        }
-
-                        if (cancellationToken.IsCancellationRequested)
-                        {
-                            buffer.Complete();
-                            break;
-                        }
+                        // Use SendAsync for efficient asynchronous posting to buffer
+                        // This is more efficient than polling with Post() and Task.Delay
+                        await buffer.SendAsync(postData, cancellationToken);
                     }
 
                     if (readCount == 0) // End of stream
@@ -138,10 +128,6 @@ namespace Buser.AsyncCompression.Application.Services
             {
                 buffer.Complete();
                 throw;
-            }
-            finally
-            {
-                semaphore.Dispose();
             }
         }
 
