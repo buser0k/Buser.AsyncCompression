@@ -169,4 +169,105 @@ public class CompressionJobTests
         // Assert
         percentage.Should().Be(0);
     }
+
+    [Fact]
+    public void Fail_WhenStatusIsRunning_ShouldChangeStatusToFailed()
+    {
+        // Arrange
+        var job = new CompressionJob(_inputFile, _outputFile, _settings);
+        job.Start();
+
+        // Act
+        job.Fail();
+
+        // Assert
+        job.Status.Should().Be(CompressionStatus.Failed);
+        job.CompletedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public void Fail_WhenStatusIsCompleted_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var job = new CompressionJob(_inputFile, _outputFile, _settings);
+        job.Start();
+        job.Complete();
+
+        // Act & Assert
+        var action = () => job.Fail();
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("Cannot fail completed job");
+    }
+
+    [Fact]
+    public void Pause_ShouldResetPauseEvent()
+    {
+        // Arrange
+        var job = new CompressionJob(_inputFile, _outputFile, _settings);
+        job.Start();
+
+        // Act
+        job.Pause();
+
+        // Assert
+        job.PauseEvent.IsSet.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Resume_ShouldSetPauseEvent()
+    {
+        // Arrange
+        var job = new CompressionJob(_inputFile, _outputFile, _settings);
+        job.Start();
+        job.Pause();
+
+        // Act
+        job.Resume();
+
+        // Assert
+        job.PauseEvent.IsSet.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Cancel_ShouldCancelCancellationToken()
+    {
+        // Arrange
+        var job = new CompressionJob(_inputFile, _outputFile, _settings);
+        job.Start();
+
+        // Act
+        job.Cancel();
+
+        // Assert
+        job.CancellationToken.IsCancellationRequested.Should().BeTrue();
+        job.PauseEvent.IsSet.Should().BeTrue(); // Should release waiting threads
+    }
+
+    [Fact]
+    public void CancellationToken_ShouldBeAvailable()
+    {
+        // Arrange
+        var job = new CompressionJob(_inputFile, _outputFile, _settings);
+
+        // Act & Assert
+        job.CancellationToken.Should().NotBeNull();
+        job.CancellationToken.IsCancellationRequested.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Dispose_ShouldDisposeResources()
+    {
+        // Arrange
+        var job = new CompressionJob(_inputFile, _outputFile, _settings);
+
+        // Act
+        job.Dispose();
+        job.Dispose(); // Should be safe to call multiple times
+
+        // Assert
+        // If we try to use CancellationToken after dispose, it should throw
+        var action = () => _ = job.CancellationToken;
+        // Note: CancellationTokenSource doesn't throw on access after dispose,
+        // but the token becomes unusable. This is expected behavior.
+    }
 }

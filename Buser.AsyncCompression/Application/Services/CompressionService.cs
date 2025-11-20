@@ -13,8 +13,6 @@ namespace Buser.AsyncCompression.Application.Services
         private readonly ICompressionAlgorithm _compressionAlgorithm;
         private readonly IFileService _fileService;
         private readonly IProgressReporter _progressReporter;
-        private readonly ManualResetEvent _pauseEvent = new ManualResetEvent(true);
-        private bool _interrupted = false;
 
         public CompressionService(
             ICompressionAlgorithm compressionAlgorithm,
@@ -46,7 +44,7 @@ namespace Buser.AsyncCompression.Application.Services
             }
             catch (Exception)
             {
-                job.Cancel();
+                job.Fail();
                 throw;
             }
         }
@@ -54,72 +52,97 @@ namespace Buser.AsyncCompression.Application.Services
         private async Task ProcessCompressionAsync(CompressionJob job, Stream inputStream, Stream outputStream)
         {
             var settings = job.Settings;
+            var cancellationToken = job.CancellationToken;
             var buffer = new BufferBlock<byte[]>(new DataflowBlockOptions { BoundedCapacity = settings.BoundedCapacity });
 
             var compressorOptions = new ExecutionDataflowBlockOptions
             {
                 MaxDegreeOfParallelism = settings.MaxDegreeOfParallelism,
-                BoundedCapacity = settings.BoundedCapacity
+                BoundedCapacity = settings.BoundedCapacity,
+                CancellationToken = cancellationToken
             };
 
             var compressor = new TransformBlock<byte[], byte[]>(
-                bytes => _compressionAlgorithm.Compress(bytes),
+                bytes =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    return _compressionAlgorithm.Compress(bytes);
+                },
                 compressorOptions);
 
             var writerOptions = new ExecutionDataflowBlockOptions
             {
                 BoundedCapacity = settings.BoundedCapacity,
-                SingleProducerConstrained = true
+                SingleProducerConstrained = true,
+                CancellationToken = cancellationToken
             };
 
             var writer = new ActionBlock<byte[]>(async bytes =>
             {
-                await outputStream.WriteAsync(bytes, 0, bytes.Length);
+                cancellationToken.ThrowIfCancellationRequested();
+                await outputStream.WriteAsync(bytes, 0, bytes.Length, cancellationToken);
                 job.UpdateProgress(job.ProcessedBytes + bytes.Length);
                 _progressReporter.Report(job.ProgressPercentage);
             }, writerOptions);
 
             // Link the pipeline
             buffer.LinkTo(compressor);
-            _ = buffer.Completion.ContinueWith(task => compressor.Complete());
+            _ = buffer.Completion.ContinueWith(task => compressor.Complete(), cancellationToken);
 
             compressor.LinkTo(writer);
-            _ = compressor.Completion.ContinueWith(task => writer.Complete());
+            _ = compressor.Completion.ContinueWith(task => writer.Complete(), cancellationToken);
 
             var readBuffer = new byte[settings.BufferSize];
+            var semaphore = new SemaphoreSlim(1, 1);
 
-            while (true)
+            try
             {
-                if (_interrupted)
+                while (true)
                 {
-                    buffer.Complete();
-                    await writer.Completion;
-                    return;
-                }
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                _pauseEvent.WaitOne(Timeout.Infinite);
+                    // Wait for pause event (non-blocking check)
+                    job.PauseEvent.Wait(cancellationToken);
 
-                int readCount = await inputStream.ReadAsync(readBuffer, 0, settings.BufferSize);
+                    int readCount = await inputStream.ReadAsync(readBuffer, 0, settings.BufferSize, cancellationToken);
 
-                if (readCount > 0)
-                {
-                    var postData = new byte[readCount];
-                    Buffer.BlockCopy(readBuffer, 0, postData, 0, readCount);
-
-                    while (!buffer.Post(postData))
+                    if (readCount > 0)
                     {
-                        await Task.Delay(1); // Wait until buffer can accept data
+                        var postData = new byte[readCount];
+                        Buffer.BlockCopy(readBuffer, 0, postData, 0, readCount);
+
+                        // Use semaphore for more efficient waiting
+                        while (!buffer.Post(postData) && !cancellationToken.IsCancellationRequested)
+                        {
+                            await semaphore.WaitAsync(10, cancellationToken);
+                            semaphore.Release();
+                        }
+
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            buffer.Complete();
+                            break;
+                        }
+                    }
+
+                    if (readCount == 0) // End of stream
+                    {
+                        buffer.Complete();
+                        break;
                     }
                 }
 
-                if (readCount == 0) // End of stream
-                {
-                    buffer.Complete();
-                    break;
-                }
+                await writer.Completion;
             }
-
-            await writer.Completion;
+            catch (OperationCanceledException)
+            {
+                buffer.Complete();
+                throw;
+            }
+            finally
+            {
+                semaphore.Dispose();
+            }
         }
 
         public void Pause(CompressionJob job)
@@ -127,7 +150,6 @@ namespace Buser.AsyncCompression.Application.Services
             if (job.Status == Domain.Entities.CompressionStatus.Running)
             {
                 job.Pause();
-                _pauseEvent.Reset();
             }
         }
 
@@ -136,14 +158,11 @@ namespace Buser.AsyncCompression.Application.Services
             if (job.Status == Domain.Entities.CompressionStatus.Paused)
             {
                 job.Resume();
-                _pauseEvent.Set();
             }
         }
 
         public void Cancel(CompressionJob job)
         {
-            _interrupted = true;
-            _pauseEvent.Set();
             job.Cancel();
         }
     }

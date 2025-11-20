@@ -12,26 +12,45 @@ namespace Buser.AsyncCompression.Infrastructure.Services
             if (!file.Exists)
                 throw new FileNotFoundException($"File not found: {file.FullPath}");
 
-            return await Task.FromResult(System.IO.File.OpenRead(file.FullPath));
+            // Use FileStream with async operations for better performance
+            var stream = new FileStream(
+                file.FullPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                bufferSize: 4096,
+                useAsync: true);
+            
+            return await Task.FromResult<Stream>(stream);
         }
 
         public async Task<Stream> CreateAsync(Buser.AsyncCompression.Domain.ValueObjects.FileInfo file)
         {
-            return await Task.FromResult(System.IO.File.Create(file.FullPath));
+            // Use FileStream with async operations for better performance
+            var stream = new FileStream(
+                file.FullPath,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 4096,
+                useAsync: true);
+            
+            return await Task.FromResult<Stream>(stream);
         }
 
-        public async Task<bool> ExistsAsync(Buser.AsyncCompression.Domain.ValueObjects.FileInfo file)
+        public Task<bool> ExistsAsync(Buser.AsyncCompression.Domain.ValueObjects.FileInfo file)
         {
-            return await Task.FromResult(System.IO.File.Exists(file.FullPath));
+            // File.Exists is a synchronous operation, but we can make it non-blocking
+            return Task.FromResult(System.IO.File.Exists(file.FullPath));
         }
 
-        public async Task DeleteAsync(Buser.AsyncCompression.Domain.ValueObjects.FileInfo file)
+        public Task DeleteAsync(Buser.AsyncCompression.Domain.ValueObjects.FileInfo file)
         {
             if (file.Exists)
             {
                 System.IO.File.Delete(file.FullPath);
             }
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
     }
 }

@@ -27,12 +27,15 @@ namespace Buser.AsyncCompression.Application.Services
             _progressReporter = progressReporter ?? throw new ArgumentNullException(nameof(progressReporter));
         }
 
-        public async Task<CompressionResult> CompressFileAsync(string inputFilePath, CompressionSettings? settings = null)
+        public CompressionJob CreateJob(string inputFilePath, CompressionSettings? settings = null)
+        {
+            return _jobFactory.CreateJob(inputFilePath, settings);
+        }
+
+        public async Task<CompressionResult> CompressFileAsync(CompressionJob job)
         {
             try
             {
-                var job = _jobFactory.CreateJob(inputFilePath, settings);
-                
                 // Validate input file
                 if (!await _fileService.ExistsAsync(job.InputFile))
                 {
@@ -50,10 +53,20 @@ namespace Buser.AsyncCompression.Application.Services
                 
                 return CompressionResult.Success(completedJob);
             }
+            catch (OperationCanceledException)
+            {
+                return CompressionResult.Failed("Compression was cancelled");
+            }
             catch (Exception ex)
             {
                 return CompressionResult.Failed($"Compression failed: {ex.Message}");
             }
+        }
+
+        public async Task<CompressionResult> CompressFileAsync(string inputFilePath, CompressionSettings? settings = null)
+        {
+            var job = CreateJob(inputFilePath, settings);
+            return await CompressFileAsync(job);
         }
 
         public void PauseCompression(CompressionJob job)
