@@ -9,6 +9,10 @@ using Microsoft.Extensions.Logging;
 
 namespace Buser.AsyncCompression.Application.Services
 {
+    /// <summary>
+    /// Application service that orchestrates compression operations.
+    /// This service coordinates between domain services and infrastructure services.
+    /// </summary>
     public class CompressionApplicationService
     {
         private readonly ICompressionService _compressionService;
@@ -31,11 +35,23 @@ namespace Buser.AsyncCompression.Application.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
+        /// <summary>
+        /// Creates a new compression job for the specified input file.
+        /// </summary>
+        /// <param name="inputFilePath">The path to the input file to compress.</param>
+        /// <param name="settings">The compression settings to use. If null, default settings are used.</param>
+        /// <param name="algorithmName">The name of the compression algorithm to use (e.g., "gzip", "brotli"). If null, the default algorithm is used.</param>
+        /// <returns>A new compression job instance.</returns>
         public CompressionJob CreateJob(string inputFilePath, CompressionSettings? settings = null, string? algorithmName = null)
         {
             return _jobFactory.CreateJob(inputFilePath, settings, algorithmName);
         }
 
+        /// <summary>
+        /// Compresses a file asynchronously using the provided compression job.
+        /// </summary>
+        /// <param name="job">The compression job to execute.</param>
+        /// <returns>A task that represents the asynchronous compression operation. The task result contains the compression result.</returns>
         public async Task<CompressionResult> CompressFileAsync(CompressionJob job)
         {
             try
@@ -56,11 +72,8 @@ namespace Buser.AsyncCompression.Application.Services
                     return CompressionResult.Failed(validationResult.ErrorMessage);
                 }
 
-                // Delete output file if exists
-                if (await _fileService.ExistsAsync(job.OutputFile, job.CancellationToken))
-                {
-                    await _fileService.DeleteAsync(job.OutputFile, job.CancellationToken);
-                }
+                // Delete output file if exists (FileService.DeleteAsync handles non-existent files gracefully)
+                await _fileService.DeleteAsync(job.OutputFile, job.CancellationToken);
 
                 // Start compression
                 var completedJob = await _compressionService.CompressAsync(job);
@@ -126,32 +139,65 @@ namespace Buser.AsyncCompression.Application.Services
             }
         }
 
+        /// <summary>
+        /// Compresses a file asynchronously by creating a job and executing it.
+        /// </summary>
+        /// <param name="inputFilePath">The path to the input file to compress.</param>
+        /// <param name="settings">The compression settings to use. If null, default settings are used.</param>
+        /// <param name="algorithmName">The name of the compression algorithm to use. If null, the default algorithm is used.</param>
+        /// <returns>A task that represents the asynchronous compression operation. The task result contains the compression result.</returns>
         public async Task<CompressionResult> CompressFileAsync(string inputFilePath, CompressionSettings? settings = null, string? algorithmName = null)
         {
             var job = CreateJob(inputFilePath, settings, algorithmName);
             return await CompressFileAsync(job);
         }
 
+        /// <summary>
+        /// Pauses the compression operation for the specified job.
+        /// </summary>
+        /// <param name="job">The compression job to pause.</param>
         public void PauseCompression(CompressionJob job)
         {
             _compressionService.Pause(job);
         }
 
+        /// <summary>
+        /// Resumes a paused compression operation for the specified job.
+        /// </summary>
+        /// <param name="job">The compression job to resume.</param>
         public void ResumeCompression(CompressionJob job)
         {
             _compressionService.Resume(job);
         }
 
+        /// <summary>
+        /// Cancels the compression operation for the specified job.
+        /// </summary>
+        /// <param name="job">The compression job to cancel.</param>
         public void CancelCompression(CompressionJob job)
         {
             _compressionService.Cancel(job);
         }
     }
 
+    /// <summary>
+    /// Represents the result of a compression operation.
+    /// </summary>
     public class CompressionResult
     {
+        /// <summary>
+        /// Gets a value indicating whether the compression operation was successful.
+        /// </summary>
         public bool IsSuccess { get; }
+        
+        /// <summary>
+        /// Gets the compression job that was executed. This is null if the operation failed.
+        /// </summary>
         public CompressionJob Job { get; }
+        
+        /// <summary>
+        /// Gets the error message if the operation failed, or an empty string if successful.
+        /// </summary>
         public string ErrorMessage { get; }
 
         private CompressionResult(bool isSuccess, CompressionJob job, string errorMessage)

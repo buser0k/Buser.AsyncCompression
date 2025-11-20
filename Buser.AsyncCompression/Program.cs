@@ -15,8 +15,6 @@ namespace Buser.AsyncCompression
 {
     static class Program
     {
-        private const int BlockSize = 1024 * 8;
-
         static async Task<int> Main(string[] args)
         {
             // For testing, use a hardcoded file name
@@ -33,7 +31,8 @@ namespace Buser.AsyncCompression
             
             // Get CompressionApplicationService from DI container
             var applicationService = serviceProvider.GetRequiredService<CompressionApplicationService>();
-            var settings = new CompressionSettings(BlockSize);
+            // Use default settings from CompressionSettings
+            var settings = CompressionSettings.Default;
 
             var stopwatch = Stopwatch.StartNew();
 
