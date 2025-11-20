@@ -28,6 +28,9 @@ namespace Buser.AsyncCompression.Infrastructure.DI
             services.AddSingleton<CompressionJobFactory>();
             services.AddSingleton<CompressionAlgorithmFactory>();
 
+            // Register application services
+            services.AddTransient<CompressionApplicationService>();
+
             return services.BuildServiceProvider();
         }
     }

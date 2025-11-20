@@ -31,11 +31,8 @@ namespace Buser.AsyncCompression
             var progressReporter = new ProgressBar();
             using var serviceProvider = ServiceConfiguration.ConfigureServices(progressReporter);
             
-            var applicationService = new CompressionApplicationService(
-                serviceProvider.GetRequiredService<ICompressionService>(),
-                serviceProvider.GetRequiredService<IFileService>(),
-                serviceProvider.GetRequiredService<CompressionJobFactory>(),
-                progressReporter);
+            // Get CompressionApplicationService from DI container
+            var applicationService = serviceProvider.GetRequiredService<CompressionApplicationService>();
             var settings = new CompressionSettings(BlockSize);
 
             var stopwatch = Stopwatch.StartNew();

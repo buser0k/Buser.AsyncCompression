@@ -1,3 +1,4 @@
+using System.Threading;
 using Buser.AsyncCompression.Domain.ValueObjects;
 using Buser.AsyncCompression.Infrastructure.Services;
 using FluentAssertions;
@@ -163,6 +164,62 @@ public class FileServiceTests : IDisposable
         // Assert
         isAsync.Should().BeTrue("Async method should return immediately without blocking");
         stream.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task OpenReadAsync_WithCancellationToken_ShouldRespectCancellation()
+    {
+        // Arrange
+        var tempFile = CreateTempFile("test content");
+        var fileInfo = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(tempFile);
+        var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        // Act & Assert
+        var action = async () => await _service.OpenReadAsync(fileInfo, cancellationTokenSource.Token);
+        await action.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithCancellationToken_ShouldRespectCancellation()
+    {
+        // Arrange
+        var tempFile = GetTempFilePath();
+        var fileInfo = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(tempFile);
+        var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        // Act & Assert
+        var action = async () => await _service.CreateAsync(fileInfo, cancellationTokenSource.Token);
+        await action.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task ExistsAsync_WithCancellationToken_ShouldRespectCancellation()
+    {
+        // Arrange
+        var tempFile = CreateTempFile("test content");
+        var fileInfo = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(tempFile);
+        var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        // Act & Assert
+        var action = async () => await _service.ExistsAsync(fileInfo, cancellationTokenSource.Token);
+        await action.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WithCancellationToken_ShouldRespectCancellation()
+    {
+        // Arrange
+        var tempFile = CreateTempFile("test content");
+        var fileInfo = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(tempFile);
+        var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        // Act & Assert
+        var action = async () => await _service.DeleteAsync(fileInfo, cancellationTokenSource.Token);
+        await action.Should().ThrowAsync<OperationCanceledException>();
     }
 
     private string CreateTempFile(string content)

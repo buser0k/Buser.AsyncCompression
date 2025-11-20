@@ -1,6 +1,8 @@
 using Buser.AsyncCompression.Application.Factories;
 using Buser.AsyncCompression.Domain.Entities;
+using Buser.AsyncCompression.Domain.Interfaces;
 using Buser.AsyncCompression.Domain.ValueObjects;
+using Buser.AsyncCompression.Infrastructure.Algorithms;
 using FluentAssertions;
 using Xunit;
 
@@ -12,7 +14,8 @@ public class CompressionJobFactoryTests
 
     public CompressionJobFactoryTests()
     {
-        _factory = new CompressionJobFactory();
+        ICompressionAlgorithm algorithm = new GZipCompressionAlgorithm();
+        _factory = new CompressionJobFactory(algorithm);
     }
 
     [Fact]
@@ -109,5 +112,29 @@ public class CompressionJobFactoryTests
 
         // Assert
         job1.Id.Should().NotBe(job2.Id);
+    }
+
+    [Fact]
+    public void CreateJob_ShouldUseAlgorithmFileExtension()
+    {
+        // Arrange
+        ICompressionAlgorithm gzipAlgorithm = new GZipCompressionAlgorithm();
+        var factory = new CompressionJobFactory(gzipAlgorithm);
+        var inputFilePath = Path.Combine("test", "input.txt");
+
+        // Act
+        var job = factory.CreateJob(inputFilePath);
+
+        // Assert
+        job.OutputFile.FullPath.Should().EndWith(gzipAlgorithm.FileExtension);
+    }
+
+    [Fact]
+    public void Constructor_WithNullAlgorithm_ShouldThrowArgumentNullException()
+    {
+        // Act & Assert
+        var action = () => new CompressionJobFactory(null!);
+        action.Should().Throw<ArgumentNullException>()
+            .WithParameterName("compressionAlgorithm");
     }
 }

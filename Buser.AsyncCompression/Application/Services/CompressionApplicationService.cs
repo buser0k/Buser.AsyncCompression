@@ -37,15 +37,15 @@ namespace Buser.AsyncCompression.Application.Services
             try
             {
                 // Validate input file
-                if (!await _fileService.ExistsAsync(job.InputFile))
+                if (!await _fileService.ExistsAsync(job.InputFile, job.CancellationToken))
                 {
                     return CompressionResult.Failed($"Input file does not exist: {job.InputFile.FullPath}");
                 }
 
                 // Delete output file if exists
-                if (await _fileService.ExistsAsync(job.OutputFile))
+                if (await _fileService.ExistsAsync(job.OutputFile, job.CancellationToken))
                 {
-                    await _fileService.DeleteAsync(job.OutputFile);
+                    await _fileService.DeleteAsync(job.OutputFile, job.CancellationToken);
                 }
 
                 // Start compression

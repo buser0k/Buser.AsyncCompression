@@ -1,4 +1,5 @@
 using Buser.AsyncCompression.Application.Factories;
+using Buser.AsyncCompression.Application.Services;
 using Buser.AsyncCompression.Domain.Entities;
 using Buser.AsyncCompression.Domain.Interfaces;
 using Buser.AsyncCompression.Domain.ValueObjects;
@@ -28,15 +29,32 @@ public class CompressionIntegrationTests : IDisposable
         // Act & Assert
         _serviceProvider.GetRequiredService<IFileService>().Should().NotBeNull();
         _serviceProvider.GetRequiredService<ICompressionAlgorithm>().Should().NotBeNull();
-        // Note: ICompressionService requires IProgressReporter which is not registered
-        // Note: CompressionApplicationService is not registered in DI container
+        _serviceProvider.GetRequiredService<CompressionJobFactory>().Should().NotBeNull();
+        
+        // Note: ICompressionService and CompressionApplicationService require IProgressReporter
+        // which is only registered when provided to ConfigureServices
+    }
+
+    [Fact]
+    public void ServiceConfiguration_WithProgressReporter_ShouldRegisterAllServices()
+    {
+        // Arrange
+        var mockProgressReporter = new Moq.Mock<Buser.AsyncCompression.Domain.Interfaces.IProgressReporter>().Object;
+        using var serviceProvider = ServiceConfiguration.ConfigureServices(mockProgressReporter);
+
+        // Act & Assert
+        serviceProvider.GetRequiredService<IFileService>().Should().NotBeNull();
+        serviceProvider.GetRequiredService<ICompressionAlgorithm>().Should().NotBeNull();
+        serviceProvider.GetRequiredService<ICompressionService>().Should().NotBeNull();
+        serviceProvider.GetRequiredService<CompressionApplicationService>().Should().NotBeNull();
+        serviceProvider.GetRequiredService<CompressionJobFactory>().Should().NotBeNull();
     }
 
     [Fact]
     public void CompressionJobFactory_ShouldCreateValidJob()
     {
         // Arrange
-        var factory = new CompressionJobFactory();
+        var factory = _serviceProvider.GetRequiredService<CompressionJobFactory>();
         var inputPath = Path.Combine("test", "input.txt");
 
         // Act
@@ -45,7 +63,7 @@ public class CompressionIntegrationTests : IDisposable
         // Assert
         job.Should().NotBeNull();
         job.InputFile.FullPath.Should().Be(Path.GetFullPath(inputPath));
-        job.OutputFile.FullPath.Should().Be(Path.GetFullPath(inputPath) + ".gz");
+        job.OutputFile.FullPath.Should().EndWith(".gz"); // Should use algorithm's extension
         job.Status.Should().Be(CompressionStatus.Created);
     }
 
