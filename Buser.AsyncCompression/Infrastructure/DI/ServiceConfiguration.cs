@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Buser.AsyncCompression.Application.Factories;
 using Buser.AsyncCompression.Application.Services;
 using Buser.AsyncCompression.Domain.Interfaces;
@@ -12,6 +13,13 @@ namespace Buser.AsyncCompression.Infrastructure.DI
         public static ServiceProvider ConfigureServices(IProgressReporter? progressReporter = null)
         {
             var services = new ServiceCollection();
+
+            // Register logging
+            services.AddLogging(builder =>
+            {
+                builder.AddConsole();
+                builder.SetMinimumLevel(LogLevel.Information);
+            });
 
             // Register services
             services.AddSingleton<IFileService, FileService>();

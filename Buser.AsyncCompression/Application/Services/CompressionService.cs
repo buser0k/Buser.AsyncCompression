@@ -5,23 +5,42 @@ using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using Buser.AsyncCompression.Domain.Entities;
 using Buser.AsyncCompression.Domain.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace Buser.AsyncCompression.Application.Services
 {
     public class CompressionService : ICompressionService
     {
-        private readonly ICompressionAlgorithm _compressionAlgorithm;
+        private readonly ICompressionAlgorithm _defaultCompressionAlgorithm;
         private readonly IFileService _fileService;
         private readonly IProgressReporter _progressReporter;
+        private readonly ILogger<CompressionService> _logger;
+        private readonly Application.Factories.CompressionAlgorithmFactory _algorithmFactory;
 
         public CompressionService(
-            ICompressionAlgorithm compressionAlgorithm,
+            ICompressionAlgorithm defaultCompressionAlgorithm,
             IFileService fileService,
-            IProgressReporter progressReporter)
+            IProgressReporter progressReporter,
+            ILogger<CompressionService> logger,
+            Application.Factories.CompressionAlgorithmFactory algorithmFactory)
         {
-            _compressionAlgorithm = compressionAlgorithm ?? throw new ArgumentNullException(nameof(compressionAlgorithm));
+            _defaultCompressionAlgorithm = defaultCompressionAlgorithm ?? throw new ArgumentNullException(nameof(defaultCompressionAlgorithm));
             _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
             _progressReporter = progressReporter ?? throw new ArgumentNullException(nameof(progressReporter));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _algorithmFactory = algorithmFactory ?? throw new ArgumentNullException(nameof(algorithmFactory));
+        }
+
+        private ICompressionAlgorithm GetAlgorithmForJob(CompressionJob job)
+        {
+            // Determine algorithm based on output file extension
+            var extension = System.IO.Path.GetExtension(job.OutputFile.FullPath).ToLower();
+            return extension switch
+            {
+                ".gz" => _algorithmFactory.CreateGZipAlgorithm(),
+                ".br" => _algorithmFactory.CreateBrotliAlgorithm(),
+                _ => _defaultCompressionAlgorithm // Default fallback
+            };
         }
 
         public async Task<CompressionJob> CompressAsync(CompressionJob job)
@@ -29,6 +48,7 @@ namespace Buser.AsyncCompression.Application.Services
             if (job == null)
                 throw new ArgumentNullException(nameof(job));
 
+            _logger.LogInformation("Starting compression job {JobId} for file {InputFile}", job.Id, job.InputFile.FullPath);
             job.Start();
 
             try
@@ -40,12 +60,20 @@ namespace Buser.AsyncCompression.Application.Services
                 }
 
                 job.Complete();
+                _logger.LogInformation("Compression job {JobId} completed successfully. Output: {OutputFile}", job.Id, job.OutputFile.FullPath);
                 return job;
             }
-            catch (Exception)
+            catch (OperationCanceledException)
             {
-                job.Fail();
+                _logger.LogWarning("Compression job {JobId} was cancelled", job.Id);
+                job.Cancel();
                 throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Compression job {JobId} failed: {ErrorMessage}", job.Id, ex.Message);
+                job.Fail();
+                throw new InvalidOperationException($"Compression failed: {ex.Message}", ex);
             }
         }
 
@@ -53,6 +81,10 @@ namespace Buser.AsyncCompression.Application.Services
         {
             var settings = job.Settings;
             var cancellationToken = job.CancellationToken;
+            var algorithm = GetAlgorithmForJob(job);
+            
+            _logger.LogInformation("Using {Algorithm} algorithm for job {JobId}", algorithm.Name, job.Id);
+            
             var buffer = new BufferBlock<byte[]>(new DataflowBlockOptions { BoundedCapacity = settings.BoundedCapacity });
 
             var compressorOptions = new ExecutionDataflowBlockOptions
@@ -66,7 +98,7 @@ namespace Buser.AsyncCompression.Application.Services
                 bytes =>
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    return _compressionAlgorithm.Compress(bytes);
+                    return algorithm.Compress(bytes);
                 },
                 compressorOptions);
 
@@ -79,10 +111,20 @@ namespace Buser.AsyncCompression.Application.Services
 
             var writer = new ActionBlock<byte[]>(async bytes =>
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                await outputStream.WriteAsync(bytes, 0, bytes.Length, cancellationToken);
-                job.UpdateProgress(job.ProcessedBytes + bytes.Length);
-                _progressReporter.Report(job.ProgressPercentage);
+                try
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await outputStream.WriteAsync(bytes, 0, bytes.Length, cancellationToken);
+                    job.UpdateProgress(job.ProcessedBytes + bytes.Length);
+                    _progressReporter.Report(job.ProgressPercentage);
+                }
+                catch (Exception ex) when (!(ex is OperationCanceledException))
+                {
+                    // Mark job as failed and rethrow to stop the pipeline
+                    _logger.LogError(ex, "Failed to write compressed data for job {JobId}", job.Id);
+                    job.Fail();
+                    throw new IOException($"Failed to write compressed data: {ex.Message}", ex);
+                }
             }, writerOptions);
 
             // Link the pipeline
@@ -135,6 +177,7 @@ namespace Buser.AsyncCompression.Application.Services
         {
             if (job.Status == Domain.Entities.CompressionStatus.Running)
             {
+                _logger.LogInformation("Pausing compression job {JobId}", job.Id);
                 job.Pause();
             }
         }
@@ -143,12 +186,14 @@ namespace Buser.AsyncCompression.Application.Services
         {
             if (job.Status == Domain.Entities.CompressionStatus.Paused)
             {
+                _logger.LogInformation("Resuming compression job {JobId}", job.Id);
                 job.Resume();
             }
         }
 
         public void Cancel(CompressionJob job)
         {
+            _logger.LogInformation("Cancelling compression job {JobId}", job.Id);
             job.Cancel();
         }
     }

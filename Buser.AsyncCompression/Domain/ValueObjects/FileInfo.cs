@@ -23,14 +23,6 @@ namespace Buser.AsyncCompression.Domain.ValueObjects
             Size = Exists ? fileInfo.Length : 0;
         }
 
-        public void Delete()
-        {
-            if (Exists)
-            {
-                System.IO.File.Delete(FullPath);
-            }
-        }
-
         public override bool Equals(object? obj)
         {
             return obj is FileInfo other && FullPath.Equals(other.FullPath, StringComparison.OrdinalIgnoreCase);

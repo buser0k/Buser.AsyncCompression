@@ -15,7 +15,8 @@ public class CompressionJobFactoryTests
     public CompressionJobFactoryTests()
     {
         ICompressionAlgorithm algorithm = new GZipCompressionAlgorithm();
-        _factory = new CompressionJobFactory(algorithm);
+        var algorithmFactory = new CompressionAlgorithmFactory();
+        _factory = new CompressionJobFactory(algorithm, algorithmFactory);
     }
 
     [Fact]
@@ -119,7 +120,8 @@ public class CompressionJobFactoryTests
     {
         // Arrange
         ICompressionAlgorithm gzipAlgorithm = new GZipCompressionAlgorithm();
-        var factory = new CompressionJobFactory(gzipAlgorithm);
+        var algorithmFactory = new CompressionAlgorithmFactory();
+        var factory = new CompressionJobFactory(gzipAlgorithm, algorithmFactory);
         var inputFilePath = Path.Combine("test", "input.txt");
 
         // Act
@@ -130,11 +132,74 @@ public class CompressionJobFactoryTests
     }
 
     [Fact]
+    public void CreateJob_WithBrotliAlgorithm_ShouldUseBrotliExtension()
+    {
+        // Arrange
+        ICompressionAlgorithm gzipAlgorithm = new GZipCompressionAlgorithm();
+        var algorithmFactory = new CompressionAlgorithmFactory();
+        var factory = new CompressionJobFactory(gzipAlgorithm, algorithmFactory);
+        var inputFilePath = Path.Combine("test", "input.txt");
+
+        // Act
+        var job = factory.CreateJob(inputFilePath, null, "brotli");
+
+        // Assert
+        job.OutputFile.FullPath.Should().EndWith(".br");
+    }
+
+    [Fact]
+    public void CreateJob_WithGZipAlgorithmName_ShouldUseGZipExtension()
+    {
+        // Arrange
+        ICompressionAlgorithm gzipAlgorithm = new GZipCompressionAlgorithm();
+        var algorithmFactory = new CompressionAlgorithmFactory();
+        var factory = new CompressionJobFactory(gzipAlgorithm, algorithmFactory);
+        var inputFilePath = Path.Combine("test", "input.txt");
+
+        // Act
+        var job = factory.CreateJob(inputFilePath, null, "gzip");
+
+        // Assert
+        job.OutputFile.FullPath.Should().EndWith(".gz");
+    }
+
+    [Fact]
+    public void CreateJob_WithUnknownAlgorithm_ShouldUseDefaultAlgorithm()
+    {
+        // Arrange
+        ICompressionAlgorithm gzipAlgorithm = new GZipCompressionAlgorithm();
+        var algorithmFactory = new CompressionAlgorithmFactory();
+        var factory = new CompressionJobFactory(gzipAlgorithm, algorithmFactory);
+        var inputFilePath = Path.Combine("test", "input.txt");
+
+        // Act
+        var job = factory.CreateJob(inputFilePath, null, "unknown");
+
+        // Assert
+        job.OutputFile.FullPath.Should().EndWith(".gz"); // Should default to GZip
+    }
+
+    [Fact]
     public void Constructor_WithNullAlgorithm_ShouldThrowArgumentNullException()
     {
+        // Arrange
+        var algorithmFactory = new CompressionAlgorithmFactory();
+
         // Act & Assert
-        var action = () => new CompressionJobFactory(null!);
+        var action = () => new CompressionJobFactory(null!, algorithmFactory);
         action.Should().Throw<ArgumentNullException>()
-            .WithParameterName("compressionAlgorithm");
+            .WithParameterName("defaultCompressionAlgorithm");
+    }
+
+    [Fact]
+    public void Constructor_WithNullAlgorithmFactory_ShouldThrowArgumentNullException()
+    {
+        // Arrange
+        ICompressionAlgorithm algorithm = new GZipCompressionAlgorithm();
+
+        // Act & Assert
+        var action = () => new CompressionJobFactory(algorithm, null!);
+        action.Should().Throw<ArgumentNullException>()
+            .WithParameterName("algorithmFactory");
     }
 }
