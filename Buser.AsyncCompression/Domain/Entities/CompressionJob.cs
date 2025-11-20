@@ -1,9 +1,10 @@
 using System;
+using System.Threading;
 using Buser.AsyncCompression.Domain.ValueObjects;
 
 namespace Buser.AsyncCompression.Domain.Entities
 {
-    public class CompressionJob
+    public class CompressionJob : IDisposable
     {
         public Guid Id { get; }
         public Buser.AsyncCompression.Domain.ValueObjects.FileInfo InputFile { get; }
@@ -16,6 +17,14 @@ namespace Buser.AsyncCompression.Domain.Entities
         public long ProcessedBytes { get; private set; }
         public double ProgressPercentage => InputFile.Size > 0 ? (double)ProcessedBytes / InputFile.Size : 0;
 
+        // Thread-safe state management for pause/resume/cancel
+        private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly ManualResetEventSlim _pauseEvent;
+        private bool _disposed = false;
+
+        public CancellationToken CancellationToken => _cancellationTokenSource.Token;
+        public ManualResetEventSlim PauseEvent => _pauseEvent;
+
         public CompressionJob(Buser.AsyncCompression.Domain.ValueObjects.FileInfo inputFile, Buser.AsyncCompression.Domain.ValueObjects.FileInfo outputFile, CompressionSettings settings)
         {
             Id = Guid.NewGuid();
@@ -24,6 +33,8 @@ namespace Buser.AsyncCompression.Domain.Entities
             Settings = settings ?? throw new ArgumentNullException(nameof(settings));
             Status = CompressionStatus.Created;
             CreatedAt = DateTime.UtcNow;
+            _cancellationTokenSource = new CancellationTokenSource();
+            _pauseEvent = new ManualResetEventSlim(true); // Initially not paused
         }
 
         public void Start()
@@ -41,6 +52,7 @@ namespace Buser.AsyncCompression.Domain.Entities
                 throw new InvalidOperationException($"Cannot pause job in {Status} status");
 
             Status = CompressionStatus.Paused;
+            _pauseEvent.Reset();
         }
 
         public void Resume()
@@ -49,6 +61,7 @@ namespace Buser.AsyncCompression.Domain.Entities
                 throw new InvalidOperationException($"Cannot resume job in {Status} status");
 
             Status = CompressionStatus.Running;
+            _pauseEvent.Set();
         }
 
         public void Complete()
@@ -67,6 +80,17 @@ namespace Buser.AsyncCompression.Domain.Entities
 
             Status = CompressionStatus.Cancelled;
             CompletedAt = DateTime.UtcNow;
+            _cancellationTokenSource.Cancel();
+            _pauseEvent.Set(); // Release any waiting threads
+        }
+
+        public void Fail()
+        {
+            if (Status == CompressionStatus.Completed)
+                throw new InvalidOperationException("Cannot fail completed job");
+
+            Status = CompressionStatus.Failed;
+            CompletedAt = DateTime.UtcNow;
         }
 
         public void UpdateProgress(long processedBytes)
@@ -75,6 +99,16 @@ namespace Buser.AsyncCompression.Domain.Entities
                 return;
 
             ProcessedBytes = Math.Min(processedBytes, InputFile.Size);
+        }
+
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                _cancellationTokenSource?.Dispose();
+                _pauseEvent?.Dispose();
+                _disposed = true;
+            }
         }
     }
 

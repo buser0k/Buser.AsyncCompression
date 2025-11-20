@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Buser.AsyncCompression.Application.Factories;
 using Buser.AsyncCompression.Application.Services;
+using Buser.AsyncCompression.Domain.Entities;
 using Buser.AsyncCompression.Domain.Interfaces;
 using Buser.AsyncCompression.Domain.ValueObjects;
 using Buser.AsyncCompression.Infrastructure.DI;
@@ -45,8 +46,11 @@ namespace Buser.AsyncCompression
             using (progressReporter)
             {
                 Console.WriteLine($"Compressing file: {inputFile}");
-                var compressionTask = applicationService.CompressFileAsync(inputFile, settings);
-                var keyReaderTask = StartKeyReaderAsync(applicationService, compressionTask);
+                
+                // Create job first so we can track it for pause/resume/cancel
+                var job = applicationService.CreateJob(inputFile, settings);
+                var compressionTask = applicationService.CompressFileAsync(job);
+                var keyReaderTask = StartKeyReaderAsync(applicationService, job, compressionTask);
 
                 try
                 {
@@ -76,10 +80,17 @@ namespace Buser.AsyncCompression
                     Console.WriteLine("Error: {0}", ex.Message);
                     return -1;
                 }
+                finally
+                {
+                    job?.Dispose();
+                }
             }
         }
 
-        private static async Task StartKeyReaderAsync(CompressionApplicationService applicationService, Task<CompressionResult> compressionTask)
+        private static async Task StartKeyReaderAsync(
+            CompressionApplicationService applicationService, 
+            Domain.Entities.CompressionJob job,
+            Task<CompressionResult> compressionTask)
         {
             await Task.Run(() =>
             {
@@ -91,15 +102,15 @@ namespace Buser.AsyncCompression
                     {
                         case ConsoleKey.P:
                             Console.Title = "Paused... Press R to resume.";
-                            // Note: In a real implementation, we'd need to track the current job
+                            applicationService.PauseCompression(job);
                             break;
                         case ConsoleKey.R:
                             Console.Title = "In progress... Press P to pause.";
-                            // Note: In a real implementation, we'd need to track the current job
+                            applicationService.ResumeCompression(job);
                             break;
                         case ConsoleKey.X:
                             Console.Title = "Cancelling...";
-                            // Note: In a real implementation, we'd need to track the current job
+                            applicationService.CancelCompression(job);
                             break;
                         default:
                             continue;
