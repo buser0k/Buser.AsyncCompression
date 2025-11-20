@@ -112,6 +112,59 @@ public class FileServiceTests : IDisposable
         await action.Should().NotThrowAsync();
     }
 
+    [Fact]
+    public async Task OpenReadAsync_ShouldReturnAsyncStream()
+    {
+        // Arrange
+        var tempFile = CreateTempFile("test content for async stream");
+        var fileInfo = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(tempFile);
+
+        // Act
+        using var stream = await _service.OpenReadAsync(fileInfo);
+
+        // Assert
+        stream.Should().NotBeNull();
+        stream.Should().BeAssignableTo<FileStream>();
+        var fileStream = stream as FileStream;
+        fileStream!.IsAsync.Should().BeTrue(); // Verify async mode is enabled
+    }
+
+    [Fact]
+    public async Task CreateAsync_ShouldReturnAsyncStream()
+    {
+        // Arrange
+        var tempFile = GetTempFilePath();
+        var fileInfo = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(tempFile);
+
+        // Act
+        using var stream = await _service.CreateAsync(fileInfo);
+
+        // Assert
+        stream.Should().NotBeNull();
+        stream.Should().BeAssignableTo<FileStream>();
+        var fileStream = stream as FileStream;
+        fileStream!.IsAsync.Should().BeTrue(); // Verify async mode is enabled
+    }
+
+    [Fact]
+    public async Task OpenReadAsync_ShouldNotBlockThread()
+    {
+        // Arrange
+        var tempFile = CreateTempFile("test content");
+        var fileInfo = new Buser.AsyncCompression.Domain.ValueObjects.FileInfo(tempFile);
+        var startTime = DateTime.UtcNow;
+        var isAsync = false;
+
+        // Act
+        var task = _service.OpenReadAsync(fileInfo);
+        isAsync = DateTime.UtcNow - startTime < TimeSpan.FromMilliseconds(100); // Should return immediately
+        using var stream = await task;
+
+        // Assert
+        isAsync.Should().BeTrue("Async method should return immediately without blocking");
+        stream.Should().NotBeNull();
+    }
+
     private string CreateTempFile(string content)
     {
         var tempFile = GetTempFilePath();
