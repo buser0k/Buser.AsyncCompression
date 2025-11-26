@@ -154,26 +154,29 @@ jobs:
     - name: Determine version bump type
       id: version
       run: |
-        # Check commit messages to determine version bump type
-        # For merge commits, check the merge commit message and PR title
-        COMMIT_MSG=$(git log -1 --pretty=%B)
-        MERGE_COMMIT=$(git log -1 --pretty=%s)
-        
-        # Check for breaking changes or major version indicators
-        if echo "$COMMIT_MSG $MERGE_COMMIT" | grep -qiE "(breaking|major|BREAKING)"; then
+        # Analyze all commits in this push (e.g. all commits that went into the merge)
+        COMMITS=$(git log --format=%B ${{ github.event.before }}..${{ github.sha }})
+
+        echo "Commits considered for version bump:"
+        echo "$COMMITS"
+
+        # Determine bump type based on Conventional Commits across the whole range:
+        # 1) major – any breaking change markers
+        # 2) minor – any feat/feature commits
+        # 3) patch – everything else (fix, refactor, docs, chore, etc.)
+
+        if echo "$COMMITS" | grep -qiE '(BREAKING CHANGE|breaking change|breaking:|BREAKING:|(^|[[:space:]])major(:|[[:space:]))'; then
           echo "bump=major" >> $GITHUB_OUTPUT
           echo "type=major" >> $GITHUB_OUTPUT
-          echo "Detected major version bump"
-        # Check for new features
-        elif echo "$COMMIT_MSG $MERGE_COMMIT" | grep -qiE "^(feat|feature):"; then
+          echo "Detected major version bump (breaking change)"
+        elif echo "$COMMITS" | grep -qiE '^(feat|feature)(\(.+\))?:'; then
           echo "bump=minor" >> $GITHUB_OUTPUT
           echo "type=minor" >> $GITHUB_OUTPUT
-          echo "Detected minor version bump"
-        # Default to patch for fixes and other changes
+          echo "Detected minor version bump (feature)"
         else
           echo "bump=patch" >> $GITHUB_OUTPUT
           echo "type=patch" >> $GITHUB_OUTPUT
-          echo "Detected patch version bump"
+          echo "Detected patch version bump (default)"
         fi
 
     - name: Increment version and publish

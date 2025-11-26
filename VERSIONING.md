@@ -53,12 +53,15 @@ docs: обновлена документация
 
 ## Текущая версия
 
-Текущая версия указана в файле `Buser.AsyncCompression/Buser.AsyncCompression.csproj`:
+Текущая целевая версия пакета указана в файле `Buser.AsyncCompression/Buser.AsyncCompression.csproj`:
 ```xml
-<Version>2.0.0</Version>
-<AssemblyVersion>2.0.0</AssemblyVersion>
-<FileVersion>2.0.0</FileVersion>
+<Version>3.0.1</Version>
+<AssemblyVersion>3.0.1</AssemblyVersion>
+<FileVersion>3.0.1</FileVersion>
 ```
+
+> Фактическая опубликованная на NuGet версия может быть выше, если CI/CD уже выполнял
+> автоматический bump версии при предыдущих merge в `main`.
 
 ## Процесс версионирования
 
