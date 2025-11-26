@@ -55,9 +55,9 @@ docs: обновлена документация
 
 Текущая версия указана в файле `Buser.AsyncCompression/Buser.AsyncCompression.csproj`:
 ```xml
-<Version>1.0.1</Version>
-<AssemblyVersion>1.0.1</AssemblyVersion>
-<FileVersion>1.0.1</FileVersion>
+<Version>2.0.0</Version>
+<AssemblyVersion>2.0.0</AssemblyVersion>
+<FileVersion>2.0.0</FileVersion>
 ```
 
 ## Процесс версионирования

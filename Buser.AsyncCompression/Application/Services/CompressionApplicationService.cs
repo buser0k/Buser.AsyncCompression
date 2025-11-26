@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Buser.AsyncCompression.Application.Factories;
@@ -153,6 +156,76 @@ namespace Buser.AsyncCompression.Application.Services
         }
 
         /// <summary>
+        /// Compresses all files within the specified directory recursively.
+        /// </summary>
+        /// <param name="directoryPath">The directory path to compress.</param>
+        /// <param name="settings">Compression settings. If null, default settings are used.</param>
+        /// <param name="algorithmName">Compression algorithm name. If null, the default algorithm is used.</param>
+        /// <param name="cancellationToken">Token used to cancel the directory compression operation.</param>
+        /// <returns>The directory compression result with details for each processed file.</returns>
+        public async Task<DirectoryCompressionResult> CompressDirectoryAsync(
+            string directoryPath,
+            CompressionSettings? settings = null,
+            string? algorithmName = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(directoryPath))
+            {
+                throw new ArgumentException("Directory path cannot be null or empty.", nameof(directoryPath));
+            }
+
+            var fullPath = Path.GetFullPath(directoryPath);
+
+            if (!Directory.Exists(fullPath))
+            {
+                _logger.LogWarning("Directory does not exist: {DirectoryPath}", fullPath);
+                return DirectoryCompressionResult.DirectoryNotFound(fullPath);
+            }
+
+            var filesToCompress = Directory.EnumerateFiles(fullPath, "*", SearchOption.AllDirectories).ToList();
+            if (!filesToCompress.Any())
+            {
+                _logger.LogInformation("Directory {DirectoryPath} does not contain files to compress", fullPath);
+                return DirectoryCompressionResult.Empty(fullPath);
+            }
+
+            _logger.LogInformation(
+                "Starting directory compression for {DirectoryPath}. Files to compress: {Count}",
+                fullPath,
+                filesToCompress.Count);
+
+            var fileResults = new List<FileCompressionSummary>(filesToCompress.Count);
+
+            for (var index = 0; index < filesToCompress.Count; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var filePath = filesToCompress[index];
+                _logger.LogInformation("Compressing file {Current}/{Total}: {FilePath}", index + 1, filesToCompress.Count, filePath);
+
+                var job = CreateJob(filePath, settings, algorithmName);
+                CompressionResult result;
+
+                try
+                {
+                    _progressReporter.Report(0);
+                    result = await CompressFileAsync(job);
+                }
+                finally
+                {
+                    job.Dispose();
+                }
+
+                fileResults.Add(new FileCompressionSummary(filePath, result));
+
+                var directoryProgress = (double)(index + 1) / filesToCompress.Count;
+                _progressReporter.Report(directoryProgress);
+            }
+
+            return new DirectoryCompressionResult(fullPath, fileResults);
+        }
+
+        /// <summary>
         /// Pauses the compression operation for the specified job.
         /// </summary>
         /// <param name="job">The compression job to pause.</param>
@@ -216,5 +289,101 @@ namespace Buser.AsyncCompression.Application.Services
         {
             return new CompressionResult(false, null!, errorMessage);
         }
+    }
+
+    /// <summary>
+    /// Represents the outcome of a recursive directory compression operation.
+    /// </summary>
+    public class DirectoryCompressionResult
+    {
+        public DirectoryCompressionResult(string directoryPath, IReadOnlyList<FileCompressionSummary> fileResults, string? errorMessage = null)
+        {
+            DirectoryPath = directoryPath;
+            FileResults = fileResults ?? Array.Empty<FileCompressionSummary>();
+            ErrorMessage = errorMessage ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Gets the directory that was processed.
+        /// </summary>
+        public string DirectoryPath { get; }
+
+        /// <summary>
+        /// Gets the per-file compression results.
+        /// </summary>
+        public IReadOnlyList<FileCompressionSummary> FileResults { get; }
+
+        /// <summary>
+        /// Gets a general error message if the directory could not be processed.
+        /// </summary>
+        public string ErrorMessage { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the operation encountered a general error (e.g., directory not found).
+        /// </summary>
+        public bool HasGeneralError => !string.IsNullOrEmpty(ErrorMessage);
+
+        /// <summary>
+        /// Gets the total number of files discovered in the directory.
+        /// </summary>
+        public int TotalFiles => FileResults.Count;
+
+        /// <summary>
+        /// Gets the number of files that were compressed successfully.
+        /// </summary>
+        public int SucceededFiles => FileResults.Count(result => result.IsSuccess);
+
+        /// <summary>
+        /// Gets the number of files that failed to compress.
+        /// </summary>
+        public int FailedFiles => FileResults.Count - SucceededFiles;
+
+        /// <summary>
+        /// Gets a value indicating whether all files were compressed successfully.
+        /// </summary>
+        public bool IsSuccess => !HasGeneralError && FailedFiles == 0;
+
+        public static DirectoryCompressionResult DirectoryNotFound(string directoryPath)
+            => new DirectoryCompressionResult(directoryPath, Array.Empty<FileCompressionSummary>(), $"Directory does not exist: {directoryPath}");
+
+        public static DirectoryCompressionResult Empty(string directoryPath)
+            => new DirectoryCompressionResult(directoryPath, Array.Empty<FileCompressionSummary>());
+    }
+
+    /// <summary>
+    /// Provides information about a single file that was processed during directory compression.
+    /// </summary>
+    public class FileCompressionSummary
+    {
+        public FileCompressionSummary(string filePath, CompressionResult result)
+        {
+            FilePath = filePath;
+            Result = result ?? throw new ArgumentNullException(nameof(result));
+        }
+
+        /// <summary>
+        /// Gets the path of the file that was compressed.
+        /// </summary>
+        public string FilePath { get; }
+
+        /// <summary>
+        /// Gets the compression result for this file.
+        /// </summary>
+        public CompressionResult Result { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the compression succeeded.
+        /// </summary>
+        public bool IsSuccess => Result.IsSuccess;
+
+        /// <summary>
+        /// Gets the output path for the compressed file, if available.
+        /// </summary>
+        public string? OutputFilePath => Result.Job?.OutputFile.FullPath;
+
+        /// <summary>
+        /// Gets the error message for the compression operation.
+        /// </summary>
+        public string ErrorMessage => Result.ErrorMessage;
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -36,50 +37,29 @@ namespace Buser.AsyncCompression
 
             var stopwatch = Stopwatch.StartNew();
 
-            Console.Write("Press <P> to pause, <R> to resume or <X> to interrupt the compression process...\b\n");
-            Console.Write("File compression in progress...\b\n");
-
             using (progressReporter)
             {
-                Console.WriteLine($"Compressing file: {inputFile}");
-                
-                // Create job first so we can track it for pause/resume/cancel
-                var job = applicationService.CreateJob(inputFile, settings);
-                var compressionTask = applicationService.CompressFileAsync(job);
-                var keyReaderTask = StartKeyReaderAsync(applicationService, job, compressionTask);
+                var isDirectory = Directory.Exists(inputFile);
+                var isFile = File.Exists(inputFile);
 
-                try
+                if (!isDirectory && !isFile)
                 {
-                    var result = await compressionTask;
-                    
-                    if (result.IsSuccess)
+                    Console.WriteLine($"Input path not found: {inputFile}");
+                    return -1;
+                }
+
+                if (isDirectory)
+                {
+                    var directoryResult = await CompressDirectoryAsync(applicationService, inputFile, settings);
+                    if (directoryResult == 0)
                     {
                         stopwatch.Stop();
-                        Console.WriteLine("Done in {0}s", stopwatch.Elapsed.TotalSeconds);
-                        return 0;
+                        Console.WriteLine("Directory compression completed in {0}s", stopwatch.Elapsed.TotalSeconds);
                     }
-                    else
-                    {
-                        Console.WriteLine("Error: {0}", result.ErrorMessage);
-                        return -1;
-                    }
+                    return directoryResult;
                 }
-                catch (OperationCanceledException)
-                {
-                    Console.WriteLine();
-                    Console.WriteLine("Cancelled");
-                    return -1;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine();
-                    Console.WriteLine("Error: {0}", ex.Message);
-                    return -1;
-                }
-                finally
-                {
-                    job?.Dispose();
-                }
+
+                return await CompressSingleFileAsync(applicationService, inputFile, settings, stopwatch);
             }
         }
 
@@ -113,6 +93,86 @@ namespace Buser.AsyncCompression
                     }
                 }
             });
+        }
+
+        private static async Task<int> CompressSingleFileAsync(
+            CompressionApplicationService applicationService,
+            string inputFile,
+            CompressionSettings settings,
+            Stopwatch stopwatch)
+        {
+            Console.Write("Press <P> to pause, <R> to resume or <X> to interrupt the compression process...\b\n");
+            Console.Write("File compression in progress...\b\n");
+            Console.WriteLine($"Compressing file: {inputFile}");
+
+            var job = applicationService.CreateJob(inputFile, settings);
+            var compressionTask = applicationService.CompressFileAsync(job);
+            var keyReaderTask = StartKeyReaderAsync(applicationService, job, compressionTask);
+
+            try
+            {
+                var result = await compressionTask;
+
+                if (result.IsSuccess)
+                {
+                    stopwatch.Stop();
+                    Console.WriteLine("Done in {0}s", stopwatch.Elapsed.TotalSeconds);
+                    return 0;
+                }
+
+                Console.WriteLine("Error: {0}", result.ErrorMessage);
+                return -1;
+            }
+            catch (OperationCanceledException)
+            {
+                Console.WriteLine();
+                Console.WriteLine("Cancelled");
+                return -1;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine();
+                Console.WriteLine("Error: {0}", ex.Message);
+                return -1;
+            }
+            finally
+            {
+                job?.Dispose();
+            }
+        }
+
+        private static async Task<int> CompressDirectoryAsync(
+            CompressionApplicationService applicationService,
+            string directoryPath,
+            CompressionSettings settings)
+        {
+            Console.WriteLine("Directory compression in progress (recursive)...");
+            Console.WriteLine($"Target directory: {directoryPath}");
+
+            var result = await applicationService.CompressDirectoryAsync(directoryPath, settings);
+
+            if (result.HasGeneralError)
+            {
+                Console.WriteLine("Error: {0}", result.ErrorMessage);
+                return -1;
+            }
+
+            Console.WriteLine("Processed files: {0}", result.TotalFiles);
+            Console.WriteLine("Succeeded: {0}", result.SucceededFiles);
+            Console.WriteLine("Failed: {0}", result.FailedFiles);
+
+            if (!result.IsSuccess)
+            {
+                foreach (var failure in result.FileResults.Where(r => !r.IsSuccess))
+                {
+                    Console.WriteLine($"[FAILED] {failure.FilePath}: {failure.ErrorMessage}");
+                }
+
+                return -1;
+            }
+
+            Console.WriteLine("Directory compression completed successfully.");
+            return 0;
         }
     }
 }
