@@ -18,13 +18,29 @@ namespace Buser.AsyncCompression
     {
         static async Task<int> Main(string[] args)
         {
-            // For testing, use a hardcoded file name
-            string inputFile = "test.txt";
-            
-            if (args.Length > 0 && !args[0].EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            if (args.Length == 0 || IsHelpRequested(args))
             {
-                inputFile = args[0];
+                PrintUsage();
+                return 0;
             }
+
+            var useArchive = false;
+            var index = 0;
+
+            if (args.Length > 0 && IsArchiveOption(args[0]))
+            {
+                useArchive = true;
+                index++;
+            }
+
+            if (index >= args.Length)
+            {
+                Console.WriteLine("Error: archive option requires a path to a directory.");
+                PrintUsage();
+                return -1;
+            }
+
+            var inputPath = args[index];
 
             // Configure dependency injection
             var progressReporter = new ProgressBar();
@@ -39,18 +55,20 @@ namespace Buser.AsyncCompression
 
             using (progressReporter)
             {
-                var isDirectory = Directory.Exists(inputFile);
-                var isFile = File.Exists(inputFile);
+                var isDirectory = Directory.Exists(inputPath);
+                var isFile = File.Exists(inputPath);
 
                 if (!isDirectory && !isFile)
                 {
-                    Console.WriteLine($"Input path not found: {inputFile}");
+                    Console.WriteLine($"Input path not found: {inputPath}");
                     return -1;
                 }
 
                 if (isDirectory)
                 {
-                    var directoryResult = await CompressDirectoryAsync(applicationService, inputFile, settings);
+                    var directoryResult = useArchive
+                        ? await CompressDirectoryToArchiveAsync(applicationService, inputPath, settings)
+                        : await CompressDirectoryAsync(applicationService, inputPath, settings);
                     if (directoryResult == 0)
                     {
                         stopwatch.Stop();
@@ -59,8 +77,40 @@ namespace Buser.AsyncCompression
                     return directoryResult;
                 }
 
-                return await CompressSingleFileAsync(applicationService, inputFile, settings, stopwatch);
+                return await CompressSingleFileAsync(applicationService, inputPath, settings, stopwatch);
             }
+        }
+
+        private static bool IsHelpRequested(string[] args)
+        {
+            return args.Any(a =>
+                a.Equals("-h", StringComparison.OrdinalIgnoreCase) ||
+                a.Equals("--help", StringComparison.OrdinalIgnoreCase) ||
+                a.Equals("/?", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static bool IsArchiveOption(string arg)
+        {
+            return arg.Equals("--archive", StringComparison.OrdinalIgnoreCase) ||
+                   arg.Equals("-a", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void PrintUsage()
+        {
+            Console.WriteLine("Buser.AsyncCompression - asynchronous file and directory compression");
+            Console.WriteLine();
+            Console.WriteLine("Usage:");
+            Console.WriteLine("  dotnet run <path_to_file>");
+            Console.WriteLine("  dotnet run <path_to_directory>");
+            Console.WriteLine("  dotnet run --archive <path_to_directory>   # compress directory into a single .zip archive");
+            Console.WriteLine();
+            Console.WriteLine("Examples:");
+            Console.WriteLine("  dotnet run C:\\data\\report.csv");
+            Console.WriteLine("  dotnet run ./logs");
+            Console.WriteLine("  dotnet run --archive ./logs");
+            Console.WriteLine();
+            Console.WriteLine("The application automatically detects whether the path is a file or a directory.");
+            Console.WriteLine("Use -h or --help to display this message.");
         }
 
         private static async Task StartKeyReaderAsync(
@@ -172,6 +222,26 @@ namespace Buser.AsyncCompression
             }
 
             Console.WriteLine("Directory compression completed successfully.");
+            return 0;
+        }
+
+        private static async Task<int> CompressDirectoryToArchiveAsync(
+            CompressionApplicationService applicationService,
+            string directoryPath,
+            CompressionSettings settings)
+        {
+            Console.WriteLine("Directory archiving in progress (recursive)...");
+            Console.WriteLine($"Target directory: {directoryPath}");
+
+            var archivePath = await applicationService.CompressDirectoryToArchiveAsync(directoryPath, settings);
+
+            if (string.IsNullOrEmpty(archivePath) || !File.Exists(archivePath))
+            {
+                Console.WriteLine("Failed to create archive.");
+                return -1;
+            }
+
+            Console.WriteLine($"Archive created: {archivePath}");
             return 0;
         }
     }

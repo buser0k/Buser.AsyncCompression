@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -223,6 +224,88 @@ namespace Buser.AsyncCompression.Application.Services
             }
 
             return new DirectoryCompressionResult(fullPath, fileResults);
+        }
+
+        /// <summary>
+        /// Compresses all files within the specified directory into a single archive file,
+        /// preserving the directory structure.
+        /// </summary>
+        /// <param name="directoryPath">The directory path to compress.</param>
+        /// <param name="settings">Compression settings. If null, default settings are used.</param>
+        /// <param name="algorithmName">Compression algorithm name. If null, the default algorithm is used.</param>
+        /// <param name="cancellationToken">Token used to cancel the directory compression operation.</param>
+        /// <returns>The full path to the created archive, or null if the operation failed.</returns>
+        public async Task<string?> CompressDirectoryToArchiveAsync(
+            string directoryPath,
+            CompressionSettings? settings = null,
+            string? algorithmName = null,
+            CancellationToken cancellationToken = default)
+        {
+            var directoryResult = await CompressDirectoryAsync(directoryPath, settings, algorithmName, cancellationToken);
+
+            if (directoryResult.HasGeneralError || directoryResult.SucceededFiles == 0)
+            {
+                return null;
+            }
+
+            var fullPath = Path.GetFullPath(directoryPath);
+            var archivePath = fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + ".zip";
+
+            if (File.Exists(archivePath))
+            {
+                File.Delete(archivePath);
+            }
+
+            _logger.LogInformation("Creating archive {ArchivePath} for directory {DirectoryPath}", archivePath, fullPath);
+
+            using (var archiveStream = new FileStream(archivePath, FileMode.Create, FileAccess.Write, FileShare.None))
+            using (var archive = new ZipArchive(archiveStream, ZipArchiveMode.Create, leaveOpen: false))
+            {
+                foreach (var summary in directoryResult.FileResults.Where(r => r.IsSuccess))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var sourcePath = summary.OutputFilePath ?? summary.FilePath;
+                    if (!File.Exists(sourcePath))
+                    {
+                        _logger.LogWarning("Source file for archive entry not found: {FilePath}", sourcePath);
+                        continue;
+                    }
+
+                    var relativePath = Path.GetRelativePath(fullPath, summary.FilePath);
+                    var entryDirectory = Path.GetDirectoryName(relativePath) ?? string.Empty;
+                    var entryFileName = Path.GetFileName(sourcePath);
+                    var entryPath = string.IsNullOrEmpty(entryDirectory)
+                        ? entryFileName
+                        : Path.Combine(entryDirectory, entryFileName);
+
+                    // ZIP archives require forward slashes in entry names.
+                    var normalizedEntryPath = entryPath.Replace('\\', '/');
+
+                    var entry = archive.CreateEntry(normalizedEntryPath, CompressionLevel.Optimal);
+                    using var entryStream = entry.Open();
+                    using var fileStream = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    await fileStream.CopyToAsync(entryStream, 81920, cancellationToken);
+                }
+            }
+
+            // Clean up individual compressed files (if they were created)
+            foreach (var summary in directoryResult.FileResults)
+            {
+                if (!string.IsNullOrEmpty(summary.OutputFilePath) && File.Exists(summary.OutputFilePath))
+                {
+                    try
+                    {
+                        File.Delete(summary.OutputFilePath);
+                    }
+                    catch
+                    {
+                        // Best-effort cleanup; ignore failures
+                    }
+                }
+            }
+
+            return archivePath;
         }
 
         /// <summary>

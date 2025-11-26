@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using System.IO.Compression;
 using Buser.AsyncCompression.Application.Factories;
 using Buser.AsyncCompression.Application.Services;
 using Buser.AsyncCompression.Domain.Interfaces;
@@ -84,6 +85,30 @@ public class DirectoryCompressionIntegrationTests : IDisposable
 
         result.IsSuccess.Should().BeFalse();
         result.ErrorMessage.Should().Contain("does not exist");
+    }
+
+    [Fact]
+    public async Task CompressDirectoryToArchiveAsync_ShouldCreateZipWithStructure()
+    {
+        var nested = Path.Combine(_rootDirectory, "nested");
+        Directory.CreateDirectory(nested);
+
+        var file1 = Path.Combine(_rootDirectory, "file1.txt");
+        var file2 = Path.Combine(nested, "file2.log");
+
+        File.WriteAllText(file1, "content-1");
+        File.WriteAllText(file2, "content-2");
+
+        var archivePath = await _applicationService.CompressDirectoryToArchiveAsync(_rootDirectory);
+
+        archivePath.Should().NotBeNullOrEmpty();
+        File.Exists(archivePath!).Should().BeTrue();
+
+        using var archive = ZipFile.OpenRead(archivePath!);
+        var entries = archive.Entries.Select(e => e.FullName.Replace('\\', '/')).ToList();
+
+        entries.Should().Contain("file1.txt.gz");
+        entries.Should().Contain("nested/file2.log.gz");
     }
 
     public void Dispose()

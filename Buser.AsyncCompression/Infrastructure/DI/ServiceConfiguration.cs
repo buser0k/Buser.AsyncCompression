@@ -15,10 +15,15 @@ namespace Buser.AsyncCompression.Infrastructure.DI
             var services = new ServiceCollection();
 
             // Register logging
+            // Important: minimise logging to console to avoid breaking the ProgressBar output.
+            // Only errors are written, and they go to standard error.
             services.AddLogging(builder =>
             {
-                builder.AddConsole();
-                builder.SetMinimumLevel(LogLevel.Information);
+                builder.AddConsole(options =>
+                {
+                    options.LogToStandardErrorThreshold = LogLevel.Error;
+                });
+                builder.SetMinimumLevel(LogLevel.Error);
             });
 
             // Register services
