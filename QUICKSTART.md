@@ -20,7 +20,14 @@ echo "Hello, World! This is a test file for compression." > test.txt
 
 ### 4. Запуск сжатия
 ```bash
-dotnet run
+# Сжатие файла
+dotnet run -- test.txt
+
+# Рекурсивное сжатие директории
+dotnet run -- ./some-directory
+
+# Сжатие директории в единый архив (tar.gz)
+dotnet run -- ./some-directory --single-archive
 ```
 
 ### 5. Проверка результата

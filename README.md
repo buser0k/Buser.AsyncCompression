@@ -26,13 +26,16 @@ cd Buser.AsyncCompression
 dotnet build
 
 # Запуск с файлом для сжатия
-dotnet run <путь_к_файлу>
+dotnet run -- <путь_к_файлу>
 
 # Запуск с директорией (будут сжаты все файлы рекурсивно)
-dotnet run <путь_к_папке>
+dotnet run -- <путь_к_папке>
+
+# Сжатие директории в единый архив (tar.gz)
+dotnet run -- <путь_к_папке> --single-archive
 
 # Пример
-dotnet run test.txt
+dotnet run -- test.txt
 
 # Справка
 dotnet run -- --help
@@ -120,7 +123,8 @@ Buser.AsyncCompression/
 │
 ├── 📁 Infrastructure/                       # Инфраструктурный слой
 │   ├── 📁 Algorithms/                       # Реализации алгоритмов
-│   │   └── GZipCompressionAlgorithm.cs      # GZip алгоритм сжатия
+│   │   ├── GZipCompressionAlgorithm.cs      # GZip алгоритм сжатия
+│   │   └── BrotliCompressionAlgorithm.cs    # Brotli алгоритм сжатия
 │   ├── 📁 DI/                              # Dependency Injection
 │   │   └── ServiceConfiguration.cs          # Конфигурация сервисов
 │   └── 📁 Services/                        # Реализации сервисов
@@ -128,9 +132,6 @@ Buser.AsyncCompression/
 │
 ├── 📄 Program.cs                            # Точка входа приложения
 ├── 📄 ProgressBar.cs                        # Компонент прогресс-бара
-├── 📄 TaskCompression.cs                    # Устаревший класс (legacy)
-├── 📄 GZipCompressionAlgorithm.cs           # Устаревший класс (legacy)
-├── 📄 ICompressionAlgorithm.cs              # Устаревший интерфейс (legacy)
 └── 📄 Buser.AsyncCompression.csproj         # Файл проекта
 ```
 
