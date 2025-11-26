@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Formats.Tar;
 using Buser.AsyncCompression.Application.Factories;
 using Buser.AsyncCompression.Domain.Entities;
 using Buser.AsyncCompression.Domain.Interfaces;
@@ -223,6 +225,155 @@ namespace Buser.AsyncCompression.Application.Services
             }
 
             return new DirectoryCompressionResult(fullPath, fileResults);
+        }
+
+        /// <summary>
+        /// Compresses a directory into a single archive file (tar.gz) while preserving the internal structure.
+        /// </summary>
+        /// <param name="directoryPath">The directory path to compress.</param>
+        /// <param name="outputFilePath">Optional output file path. If null, creates a .tar.gz file next to the directory.</param>
+        /// <param name="settings">Compression settings. If null, default settings are used.</param>
+        /// <param name="cancellationToken">Token used to cancel the operation.</param>
+        /// <returns>The compression result.</returns>
+        public async Task<CompressionResult> CompressDirectoryToSingleArchiveAsync(
+            string directoryPath,
+            string? outputFilePath = null,
+            CompressionSettings? settings = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(directoryPath))
+            {
+                throw new ArgumentException("Directory path cannot be null or empty.", nameof(directoryPath));
+            }
+
+            var fullPath = Path.GetFullPath(directoryPath);
+
+            if (!Directory.Exists(fullPath))
+            {
+                _logger.LogWarning("Directory does not exist: {DirectoryPath}", fullPath);
+                return CompressionResult.Failed($"Directory does not exist: {fullPath}");
+            }
+
+            var filesToCompress = Directory.EnumerateFiles(fullPath, "*", SearchOption.AllDirectories).ToList();
+            if (!filesToCompress.Any())
+            {
+                _logger.LogInformation("Directory {DirectoryPath} does not contain files to compress", fullPath);
+                return CompressionResult.Failed("Directory does not contain any files to compress");
+            }
+
+            // Determine output file path
+            if (string.IsNullOrWhiteSpace(outputFilePath))
+            {
+                var directoryName = Path.GetFileName(fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                var parentDirectory = Path.GetDirectoryName(fullPath);
+                outputFilePath = Path.Combine(parentDirectory ?? fullPath, $"{directoryName}.tar.gz");
+            }
+            else
+            {
+                outputFilePath = Path.GetFullPath(outputFilePath);
+                // Ensure .tar.gz extension
+                if (!outputFilePath.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase) && 
+                    !outputFilePath.EndsWith(".tgz", StringComparison.OrdinalIgnoreCase))
+                {
+                    outputFilePath += ".tar.gz";
+                }
+            }
+
+            // Delete output file if exists
+            if (File.Exists(outputFilePath))
+            {
+                File.Delete(outputFilePath);
+            }
+
+            try
+            {
+                // Create tar.gz archive
+                using (var fileStream = new FileStream(outputFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true))
+                using (var gzipStream = new GZipStream(fileStream, CompressionMode.Compress))
+                using (var tarWriter = new TarWriter(gzipStream, leaveOpen: false))
+                {
+                    long totalBytes = filesToCompress.Sum(f => new System.IO.FileInfo(f).Length);
+                    long processedBytes = 0;
+                    var addedDirectories = new HashSet<string>();
+
+                    foreach (var filePath in filesToCompress)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        var fileInfo = new System.IO.FileInfo(filePath);
+                        // Calculate relative path from the directory being compressed
+                        var relativePath = Path.GetRelativePath(fullPath, filePath);
+                        // Use forward slashes for tar format (Unix-style paths)
+                        var tarEntryName = relativePath.Replace('\\', '/');
+                        
+                        // Add directory entries if needed (tar format requires explicit directory entries)
+                        var entryDirectory = Path.GetDirectoryName(tarEntryName);
+                        if (!string.IsNullOrEmpty(entryDirectory))
+                        {
+                            var dirParts = entryDirectory.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                            var currentPath = string.Empty;
+                            foreach (var dirPart in dirParts)
+                            {
+                                currentPath = string.IsNullOrEmpty(currentPath) ? dirPart : $"{currentPath}/{dirPart}";
+                                // Add directory entry if not already added
+                                if (addedDirectories.Add(currentPath))
+                                {
+                                    var dirEntry = new PaxTarEntry(TarEntryType.Directory, currentPath);
+                                    await tarWriter.WriteEntryAsync(dirEntry, cancellationToken);
+                                }
+                            }
+                        }
+
+                        // Create tar entry for the file
+                        // The size is automatically determined from the DataStream
+                        var tarEntry = new PaxTarEntry(TarEntryType.RegularFile, tarEntryName);
+                        tarEntry.DataStream = fileInfo.OpenRead();
+
+                        await tarWriter.WriteEntryAsync(tarEntry, cancellationToken);
+                        await tarEntry.DataStream.DisposeAsync();
+
+                        processedBytes += fileInfo.Length;
+                        var progress = totalBytes > 0 ? (double)processedBytes / totalBytes : 0.0;
+                        _progressReporter.Report(progress);
+                    }
+                }
+
+                // Create a job-like result for consistency
+                // For archive operations, we create a synthetic job that represents
+                // the directory as input and the archive as output.
+                var firstFile = filesToCompress.FirstOrDefault();
+                var inputFile = firstFile != null
+                    ? new Domain.ValueObjects.FileInfo(firstFile)
+                    : new Domain.ValueObjects.FileInfo(fullPath);
+                var outputFile = new Domain.ValueObjects.FileInfo(outputFilePath);
+                var compressionSettings = settings ?? CompressionSettings.Default;
+
+                // Create a temporary job to represent this operation
+                var tempJob = new Domain.Entities.CompressionJob(inputFile, outputFile, compressionSettings);
+                tempJob.Start();
+                tempJob.UpdateProgress(inputFile.Size);
+                tempJob.Complete();
+
+                return CompressionResult.Success(tempJob);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Directory compression to single archive was cancelled");
+                if (File.Exists(outputFilePath))
+                {
+                    File.Delete(outputFilePath);
+                }
+                return CompressionResult.Failed("Compression was cancelled");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to compress directory to single archive: {ErrorMessage}", ex.Message);
+                if (File.Exists(outputFilePath))
+                {
+                    File.Delete(outputFilePath);
+                }
+                return CompressionResult.Failed($"Compression failed: {ex.Message}");
+            }
         }
 
         /// <summary>
