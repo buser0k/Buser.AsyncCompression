@@ -18,13 +18,20 @@ namespace Buser.AsyncCompression
     {
         static async Task<int> Main(string[] args)
         {
-            // For testing, use a hardcoded file name
-            string inputFile = "test.txt";
-            
-            if (args.Length > 0 && !args[0].EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            if (args.Length == 0 || IsHelpRequested(args))
             {
-                inputFile = args[0];
+                PrintUsage();
+                return 0;
             }
+
+            // Ignore the executable name when running single-file deployment
+            var firstArgument = args[0];
+            if (firstArgument.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && args.Length > 1)
+            {
+                firstArgument = args[1];
+            }
+
+            var inputPath = firstArgument;
 
             // Configure dependency injection
             var progressReporter = new ProgressBar();
@@ -39,18 +46,18 @@ namespace Buser.AsyncCompression
 
             using (progressReporter)
             {
-                var isDirectory = Directory.Exists(inputFile);
-                var isFile = File.Exists(inputFile);
+                var isDirectory = Directory.Exists(inputPath);
+                var isFile = File.Exists(inputPath);
 
                 if (!isDirectory && !isFile)
                 {
-                    Console.WriteLine($"Input path not found: {inputFile}");
+                    Console.WriteLine($"Input path not found: {inputPath}");
                     return -1;
                 }
 
                 if (isDirectory)
                 {
-                    var directoryResult = await CompressDirectoryAsync(applicationService, inputFile, settings);
+                    var directoryResult = await CompressDirectoryAsync(applicationService, inputPath, settings);
                     if (directoryResult == 0)
                     {
                         stopwatch.Stop();
@@ -59,9 +66,32 @@ namespace Buser.AsyncCompression
                     return directoryResult;
                 }
 
-                return await CompressSingleFileAsync(applicationService, inputFile, settings, stopwatch);
+                return await CompressSingleFileAsync(applicationService, inputPath, settings, stopwatch);
             }
         }
+        private static bool IsHelpRequested(string[] args)
+        {
+            return args.Length > 0 && (args[0].Equals("-h", StringComparison.OrdinalIgnoreCase)
+                || args[0].Equals("--help", StringComparison.OrdinalIgnoreCase)
+                || args[0].Equals("/?", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static void PrintUsage()
+        {
+            Console.WriteLine("Buser.AsyncCompression - asynchronous file and directory compression");
+            Console.WriteLine();
+            Console.WriteLine("Usage:");
+            Console.WriteLine("  dotnet run <path_to_file>");
+            Console.WriteLine("  dotnet run <path_to_directory>");
+            Console.WriteLine();
+            Console.WriteLine("Examples:");
+            Console.WriteLine("  dotnet run C:\\data\\report.csv");
+            Console.WriteLine("  dotnet run ./logs");
+            Console.WriteLine();
+            Console.WriteLine("The application automatically detects whether the path is a file or a directory.");
+            Console.WriteLine("Use -h or --help to display this message.");
+        }
+
 
         private static async Task StartKeyReaderAsync(
             CompressionApplicationService applicationService, 
