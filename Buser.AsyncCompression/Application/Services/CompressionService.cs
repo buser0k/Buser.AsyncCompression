@@ -82,6 +82,7 @@ namespace Buser.AsyncCompression.Application.Services
             var settings = job.Settings;
             var cancellationToken = job.CancellationToken;
             var algorithm = GetAlgorithmForJob(job);
+            long totalReadBytes = 0;
             
             _logger.LogInformation("Using {Algorithm} algorithm for job {JobId}", algorithm.Name, job.Id);
             
@@ -115,8 +116,6 @@ namespace Buser.AsyncCompression.Application.Services
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     await outputStream.WriteAsync(bytes, 0, bytes.Length, cancellationToken);
-                    job.UpdateProgress(job.ProcessedBytes + bytes.Length);
-                    _progressReporter.Report(job.ProgressPercentage);
                 }
                 catch (Exception ex) when (!(ex is OperationCanceledException))
                 {
@@ -155,6 +154,13 @@ namespace Buser.AsyncCompression.Application.Services
                         // Use SendAsync for efficient asynchronous posting to buffer
                         // This is more efficient than polling with Post() and Task.Delay
                         await buffer.SendAsync(postData, cancellationToken);
+                    }
+
+                    if (readCount > 0)
+                    {
+                        totalReadBytes += readCount;
+                        job.UpdateProgress(totalReadBytes);
+                        _progressReporter.Report(job.ProgressPercentage);
                     }
 
                     if (readCount == 0) // End of stream

@@ -50,6 +50,31 @@ namespace Buser.AsyncCompression
             // Make sure value is in [0..1] range
             value = Math.Max(0, Math.Min(1, value));
             Interlocked.Exchange(ref _currentProgress, value);
+
+            // Для очень быстрых операций (например, небольшие директории,
+            // упаковываемые в единый архив) таймер может не успеть отрисовать
+            // прогресс ни разу. Поэтому дополнительно обновляем отображение
+            // синхронно при каждом Report, если вывод не перенаправлен.
+            if (!Console.IsOutputRedirected)
+            {
+                lock (_lockObject)
+                {
+                    if (_disposed) return;
+
+                    Render();
+                }
+            }
+        }
+
+        private void Render()
+        {
+            int progressBlockCount = (int)(_currentProgress * BlockCount);
+            int percent = (int)(_currentProgress * 100);
+            string text = string.Format("[{0}{1}] {2,3}% {3}",
+                new string('#', progressBlockCount), new string('-', BlockCount - progressBlockCount),
+                percent,
+                Animation[_animationIndex++ % Animation.Length]);
+            UpdateText(text);
         }
 
         private void StartTimer()
@@ -65,13 +90,7 @@ namespace Buser.AsyncCompression
                         {
                             if (_disposed) return;
 
-                            int progressBlockCount = (int)(_currentProgress * BlockCount);
-                            int percent = (int)(_currentProgress * 100);
-                            string text = string.Format("[{0}{1}] {2,3}% {3}",
-                                new string('#', progressBlockCount), new string('-', BlockCount - progressBlockCount),
-                                percent,
-                                Animation[_animationIndex++ % Animation.Length]);
-                            UpdateText(text);
+                            Render();
                         }
                     }
                 }
