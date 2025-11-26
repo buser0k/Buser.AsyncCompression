@@ -57,9 +57,12 @@ namespace Buser.AsyncCompression
             {
                 var isDirectory = Directory.Exists(inputPath);
                 var isFile = File.Exists(inputPath);
+                var isDirectory = Directory.Exists(inputPath);
+                var isFile = File.Exists(inputPath);
 
                 if (!isDirectory && !isFile)
                 {
+                    Console.WriteLine($"Input path not found: {inputPath}");
                     Console.WriteLine($"Input path not found: {inputPath}");
                     return -1;
                 }
@@ -112,6 +115,29 @@ namespace Buser.AsyncCompression
             Console.WriteLine("The application automatically detects whether the path is a file or a directory.");
             Console.WriteLine("Use -h or --help to display this message.");
         }
+        private static bool IsHelpRequested(string[] args)
+        {
+            return args.Length > 0 && (args[0].Equals("-h", StringComparison.OrdinalIgnoreCase)
+                || args[0].Equals("--help", StringComparison.OrdinalIgnoreCase)
+                || args[0].Equals("/?", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static void PrintUsage()
+        {
+            Console.WriteLine("Buser.AsyncCompression - asynchronous file and directory compression");
+            Console.WriteLine();
+            Console.WriteLine("Usage:");
+            Console.WriteLine("  dotnet run <path_to_file>");
+            Console.WriteLine("  dotnet run <path_to_directory>");
+            Console.WriteLine();
+            Console.WriteLine("Examples:");
+            Console.WriteLine("  dotnet run C:\\data\\report.csv");
+            Console.WriteLine("  dotnet run ./logs");
+            Console.WriteLine();
+            Console.WriteLine("The application automatically detects whether the path is a file or a directory.");
+            Console.WriteLine("Use -h or --help to display this message.");
+        }
+
 
         private static async Task StartKeyReaderAsync(
             CompressionApplicationService applicationService, 
