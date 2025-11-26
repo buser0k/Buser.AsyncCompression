@@ -31,11 +31,31 @@ namespace Buser.AsyncCompression
             for (int i = 0; i < args.Length; i++)
             {
                 var arg = args[i];
-                
-                // Ignore the executable name when running single-file deployment
-                if (arg.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+
+                // In some single-file deployment scenarios the first argument may contain
+                // the path to the executable itself. Skip ONLY that very specific case
+                // to avoid treating it as an input path, but allow arbitrary *.exe files
+                // to be used as normal inputs for compression.
+                if (i == 0 &&
+                    arg.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                 {
-                    continue;
+                    try
+                    {
+                        var currentExeName = System.IO.Path.GetFileNameWithoutExtension(
+                            Environment.GetCommandLineArgs().FirstOrDefault() ?? string.Empty);
+                        var argExeName = System.IO.Path.GetFileNameWithoutExtension(arg);
+
+                        if (!string.IsNullOrEmpty(currentExeName) &&
+                            currentExeName.Equals(argExeName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            // This is the current executable, skip it
+                            continue;
+                        }
+                    }
+                    catch
+                    {
+                        // If anything goes wrong, fall through and treat arg as a normal input
+                    }
                 }
 
                 if (arg.Equals("--single-archive", StringComparison.OrdinalIgnoreCase) ||

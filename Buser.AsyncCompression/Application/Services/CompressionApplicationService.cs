@@ -339,12 +339,21 @@ namespace Buser.AsyncCompression.Application.Services
                 }
 
                 // Create a job-like result for consistency
+                // For archive operations, we create a synthetic job that represents
+                // the directory as input and the archive as output.
+                var firstFile = filesToCompress.FirstOrDefault();
+                var inputFile = firstFile != null
+                    ? new Domain.ValueObjects.FileInfo(firstFile)
+                    : new Domain.ValueObjects.FileInfo(fullPath);
                 var outputFile = new Domain.ValueObjects.FileInfo(outputFilePath);
-                
+                var compressionSettings = settings ?? CompressionSettings.Default;
+
                 // Create a temporary job to represent this operation
-                var tempJob = CreateJob(outputFilePath, settings);
+                var tempJob = new Domain.Entities.CompressionJob(inputFile, outputFile, compressionSettings);
+                tempJob.Start();
+                tempJob.UpdateProgress(inputFile.Size);
                 tempJob.Complete();
-                
+
                 return CompressionResult.Success(tempJob);
             }
             catch (OperationCanceledException)
