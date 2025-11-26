@@ -15,10 +15,18 @@ namespace Buser.AsyncCompression.Infrastructure.DI
             var services = new ServiceCollection();
 
             // Register logging
+            // Disable console logging to avoid breaking progress bar display
+            // Logs are still available via Debug output if needed
             services.AddLogging(builder =>
             {
-                builder.AddConsole();
-                builder.SetMinimumLevel(LogLevel.Information);
+                // Only add console logger if output is redirected (for debugging)
+                // Otherwise, use Debug output to avoid interfering with progress bar
+                if (System.Console.IsOutputRedirected)
+                {
+                    builder.AddConsole();
+                }
+                // Set minimum level to Warning to reduce noise during compression
+                builder.SetMinimumLevel(LogLevel.Warning);
             });
 
             // Register services

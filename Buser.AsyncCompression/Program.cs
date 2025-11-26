@@ -24,14 +24,37 @@ namespace Buser.AsyncCompression
                 return 0;
             }
 
-            // Ignore the executable name when running single-file deployment
-            var firstArgument = args[0];
-            if (firstArgument.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && args.Length > 1)
+            // Parse command-line arguments
+            bool singleArchive = false;
+            string? inputPath = null;
+
+            for (int i = 0; i < args.Length; i++)
             {
-                firstArgument = args[1];
+                var arg = args[i];
+                
+                // Ignore the executable name when running single-file deployment
+                if (arg.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (arg.Equals("--single-archive", StringComparison.OrdinalIgnoreCase) ||
+                    arg.Equals("-a", StringComparison.OrdinalIgnoreCase))
+                {
+                    singleArchive = true;
+                }
+                else if (!arg.StartsWith("-") && string.IsNullOrEmpty(inputPath))
+                {
+                    inputPath = arg;
+                }
             }
 
-            var inputPath = firstArgument;
+            if (string.IsNullOrEmpty(inputPath))
+            {
+                Console.WriteLine("Error: Input path is required.");
+                PrintUsage();
+                return -1;
+            }
 
             // Configure dependency injection
             var progressReporter = new ProgressBar();
@@ -57,13 +80,21 @@ namespace Buser.AsyncCompression
 
                 if (isDirectory)
                 {
-                    var directoryResult = await CompressDirectoryAsync(applicationService, inputPath, settings);
-                    if (directoryResult == 0)
+                    if (singleArchive)
                     {
-                        stopwatch.Stop();
-                        Console.WriteLine("Directory compression completed in {0}s", stopwatch.Elapsed.TotalSeconds);
+                        var archiveResult = await CompressDirectoryToSingleArchiveAsync(applicationService, inputPath, settings, stopwatch);
+                        return archiveResult;
                     }
-                    return directoryResult;
+                    else
+                    {
+                        var directoryResult = await CompressDirectoryAsync(applicationService, inputPath, settings);
+                        if (directoryResult == 0)
+                        {
+                            stopwatch.Stop();
+                            Console.WriteLine("Directory compression completed in {0}s", stopwatch.Elapsed.TotalSeconds);
+                        }
+                        return directoryResult;
+                    }
                 }
 
                 return await CompressSingleFileAsync(applicationService, inputPath, settings, stopwatch);
@@ -82,11 +113,17 @@ namespace Buser.AsyncCompression
             Console.WriteLine();
             Console.WriteLine("Usage:");
             Console.WriteLine("  dotnet run <path_to_file>");
-            Console.WriteLine("  dotnet run <path_to_directory>");
+            Console.WriteLine("  dotnet run <path_to_directory> [--single-archive|-a]");
+            Console.WriteLine();
+            Console.WriteLine("Options:");
+            Console.WriteLine("  --single-archive, -a    Pack directory into a single archive file (tar.gz)");
+            Console.WriteLine("                         preserving internal structure");
             Console.WriteLine();
             Console.WriteLine("Examples:");
             Console.WriteLine("  dotnet run C:\\data\\report.csv");
             Console.WriteLine("  dotnet run ./logs");
+            Console.WriteLine("  dotnet run ./logs --single-archive");
+            Console.WriteLine("  dotnet run ./logs -a");
             Console.WriteLine();
             Console.WriteLine("The application automatically detects whether the path is a file or a directory.");
             Console.WriteLine("Use -h or --help to display this message.");
@@ -203,6 +240,33 @@ namespace Buser.AsyncCompression
 
             Console.WriteLine("Directory compression completed successfully.");
             return 0;
+        }
+
+        private static async Task<int> CompressDirectoryToSingleArchiveAsync(
+            CompressionApplicationService applicationService,
+            string directoryPath,
+            CompressionSettings settings,
+            Stopwatch stopwatch)
+        {
+            Console.WriteLine("Compressing directory to single archive (tar.gz)...");
+            Console.WriteLine($"Target directory: {directoryPath}");
+            Console.Write("Press <P> to pause, <R> to resume or <X> to interrupt the compression process...\b\n");
+            Console.Write("Archive compression in progress...\b\n");
+
+            var result = await applicationService.CompressDirectoryToSingleArchiveAsync(directoryPath, null, settings);
+
+            if (result.IsSuccess)
+            {
+                stopwatch.Stop();
+                Console.WriteLine();
+                Console.WriteLine($"Archive created: {result.Job.OutputFile.FullPath}");
+                Console.WriteLine("Done in {0}s", stopwatch.Elapsed.TotalSeconds);
+                return 0;
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("Error: {0}", result.ErrorMessage);
+            return -1;
         }
     }
 }
